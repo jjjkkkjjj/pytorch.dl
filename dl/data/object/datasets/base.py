@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 import numpy as np
 import abc
 
-from .._utils import _check_ins, _contain_ignore
+from ..._utils import _check_ins, _contain_ignore
 from ..target_transforms import Ignore
 
 """

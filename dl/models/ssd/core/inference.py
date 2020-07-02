@@ -1,6 +1,5 @@
 from .boxes import iou, centroids2corners
-from .._utils import _check_ins
-from dl.core.boxes.codec import Decoder
+from ...._utils import _check_ins
 
 from torch.nn import Module
 from torch.nn import functional as F
@@ -14,7 +13,7 @@ class InferenceBoxBase(Module):
         self.class_nums_with_background = class_nums_with_background
         self.filter_func = filter_func
 
-        from ..models.base import SSDValConfig
+        from ..base import SSDValConfig
         self.val_config = _check_ins('val_config', val_config, SSDValConfig)
         
         self.device = torch.device('cpu')

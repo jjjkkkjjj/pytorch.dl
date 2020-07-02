@@ -1,14 +1,12 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 
 from math import sqrt as sqrt
 from itertools import product as product
 
-from dl.core.layers import *
-from dl.core.boxes.dbox import DBoxSSDOriginal, _DefaultBox
-from dl.core.boxes.codec import Codec
+from dl.models.ssd.core.boxes import DBoxSSDOriginal
+from dl.models.ssd.core.boxes import Codec
 
 import os
 

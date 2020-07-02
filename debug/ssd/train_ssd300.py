@@ -1,5 +1,4 @@
-from dl.data import transforms, target_transforms, augmentations, utils
-from dl.data import datasets
+from dl.data.object import datasets, utils, target_transforms, transforms, augmentations
 
 from dl.models.ssd.ssd300 import SSD300
 from dl.train import *

@@ -1,2 +1,2 @@
-from .downloader import *
-from .downloader import choices
+from .object.downloader import *
+from .object.downloader import choices

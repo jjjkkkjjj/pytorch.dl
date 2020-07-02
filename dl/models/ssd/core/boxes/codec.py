@@ -2,7 +2,7 @@ from torch import nn
 import torch
 
 from .utils import matching_strategy
-from ..._utils import _check_norm, _check_ins
+from ....._utils import _check_norm, _check_ins
 import torchvision
 
 class EncoderBase(nn.Module):

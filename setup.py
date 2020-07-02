@@ -3,10 +3,14 @@ from distutils.core import setup
 setup(
     name='pytorch.dl',
     version='0.0.1',
-    packages=['dl', 'dl.core', 'dl.core.boxes',
+    # too stupid code....
+    packages=['dl',
               'dl.train',
-              'dl.models', 'dl.models.ssd', 'dl.models.vgg',
-              'dl.data', 'dl.data.datasets', 'dl.data.augmentations'],
+              'dl.models',
+              'dl.models.ssd', 'dl.models.ssd.core', 'dl.models.ssd.core.boxes',
+              'dl.models.vgg',
+              'dl.data', 'dl.data.object', 'dl.data.object.datasets', 'dl.data.object.augmentations',
+              'dl.data.text', 'dl.data.text.datasets'],
     url='https://github.com/jjjkkkjjj/pytorch.dl',
     license='MIT',
     author='jjjkkkjjj',

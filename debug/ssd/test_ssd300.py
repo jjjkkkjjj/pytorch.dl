@@ -1,8 +1,7 @@
-from dl.data import datasets
-from dl.data import transforms, target_transforms, utils
+from dl.data.object import datasets, utils, target_transforms, transforms
 
 from dl.models.ssd.ssd300 import SSD300
-from dl.core.inference import toVisualizeRGBImg
+from dl.models.ssd.core import toVisualizeRGBImg
 from torch.utils.data import DataLoader
 import cv2
 

@@ -1,8 +1,8 @@
 import argparse
 import os
 
-from dl.data.datasets import VOC2007_ROOT, VOC_class_labels
-from dl.data.datasets import COCO2014_ROOT, COCO_class_labels
+from dl.data.object.datasets import VOC2007_ROOT, VOC_class_labels
+from dl.data.object.datasets import COCO2014_ROOT, COCO_class_labels
 
 voc_rootdir_default = [VOC2007_ROOT]
 coco_rootdir_default = [os.path.join(COCO2014_ROOT, 'trainval')]
@@ -102,10 +102,8 @@ from torch.utils.data import DataLoader
 from torch.optim.adam import Adam
 from torch.optim.sgd import SGD
 
-from dl.data import transforms, target_transforms, augmentations, utils
-from dl.data import datasets
-from dl.models.ssd.ssd300 import SSD300
-from dl.models.ssd.ssd512 import SSD512
+from dl.data.object import datasets, utils, target_transforms, transforms, augmentations
+from dl.models.ssd import *
 from dl.train import *
 
 

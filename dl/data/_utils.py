@@ -49,7 +49,7 @@ def _separate_ignore(target_transform):
     :return: ignore, target_transform
     """
     if target_transform:
-        from .target_transforms import Ignore, Compose
+        from .object.target_transforms import Ignore, Compose
         if isinstance(target_transform, Ignore):
             return target_transform, None
 
@@ -71,7 +71,7 @@ def _separate_ignore(target_transform):
 
 def _contain_ignore(target_transform):
     if target_transform:
-        from .target_transforms import Ignore, Compose
+        from .object.target_transforms import Ignore, Compose
         if isinstance(target_transform, Ignore):
             raise ValueError('target_transforms.Ignore must be passed to \'ignore\' argument')
 

@@ -1,6 +1,6 @@
-from ...core.layers import *
-from ...models.base import SSDvggBase, SSDTrainConfig, SSDValConfig, load_vgg_weights
-from ...core.boxes import *
+from .base import SSDvggBase, SSDTrainConfig, SSDValConfig, load_vgg_weights
+from .core.boxes import *
+from ..layers import *
 
 from torch import nn
 

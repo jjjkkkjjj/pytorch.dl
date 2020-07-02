@@ -1,10 +1,9 @@
-from torch.utils.data import Dataset
 from xml.etree import ElementTree as ET
 import cv2, os
 import numpy as np
 
 from .base import ObjectDetectionDatasetBase, Compose
-from .._utils import DATA_ROOT, _get_xml_et_value, _check_ins
+from ..._utils import DATA_ROOT, _get_xml_et_value, _check_ins
 
 VOC_class_labels = ['aeroplane', 'bicycle', 'bird', 'boat',
     'bottle', 'bus', 'car', 'cat', 'chair',
@@ -92,7 +91,7 @@ class VOCSingleDatasetBase(ObjectDetectionDatasetBase):
             label = _get_xml_et_value(obj, 'name')
             if label not in self._class_labels:
                 raise ValueError('Invalid label found. \'{}\' was not in labels: {}'.format(label, self._class_labels))
-            linds.append(self._class_labels.index())
+            linds.append(self._class_labels.index(label))
 
             bndbox = obj.find('bndbox')
 

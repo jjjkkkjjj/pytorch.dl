@@ -5,7 +5,7 @@ import time, logging
 
 from .log import LogManager
 from .._utils import _check_ins
-from ..models.base import SSDBase
+from ..models.ssd.base import SSDBase
 from .eval import EvaluatorBase
 """
     ref: https://nextjournal.com/gkoehler/pytorch-mnist

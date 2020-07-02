@@ -3,7 +3,7 @@ import numpy as np
 from pycocotools.coco import COCO
 
 from .base import ObjectDetectionDatasetBase, Compose
-from .._utils import DATA_ROOT, _get_xml_et_value, _check_ins
+from ..._utils import DATA_ROOT, _check_ins
 
 COCO_class_labels = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
                     'train', 'truck', 'boat', 'traffic light', 'fire hydrant',
