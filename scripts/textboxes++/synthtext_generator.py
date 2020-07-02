@@ -1,4 +1,4 @@
-from text_data.datasets.synthtext import annotationGenerator
+from dl.data.text.datasets.synthtext import annotationGenerator
 
 import argparse
 

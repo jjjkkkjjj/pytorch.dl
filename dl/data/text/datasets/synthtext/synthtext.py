@@ -4,7 +4,7 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 from ..base import TextDetectionDatasetBase
 
-from ssd_data._utils import DATA_ROOT, _check_ins, _get_xml_et_value
+from ...._utils import DATA_ROOT, _check_ins, _get_xml_et_value
 
 SynthText_class_labels = ['text']
 SynthText_class_nums = len(SynthText_class_labels)

@@ -28,7 +28,7 @@ if __name__ == '__main__':
                              pin_memory=False)
 
     model = SSD300(class_labels=datasets.VOC_class_labels, batch_norm=False)
-    model.load_weights('./weights/ssd300-voc2007+12+coco/ssd300-voc2007+2012+coco_i-0015000_checkpoints20200611.pth')
+    model.load_weights('../../weights/results/ssd300-voc2007+2012+coco_i-0025000_checkpoints20200611.pth')
     #model.load_for_finetune('./weights/ssd300-voc2007+12+coco/ssd300-voc2007+2012+coco_i-30000.pth')
     model.eval()
     print(model)
@@ -37,7 +37,7 @@ if __name__ == '__main__':
     #ap = evaluator(model)
     #print(ap)
 
-    image = cv2.cvtColor(cv2.imread('assets/coco_testimg.jpg'), cv2.COLOR_BGR2RGB)
+    image = cv2.cvtColor(cv2.imread('../../scripts/ssd/assets/coco_testimg.jpg'), cv2.COLOR_BGR2RGB)
     infers, imgs, orig_imgs = model.infer(cv2.resize(image, (300, 300)), visualize=True, toNorm=True)
     for i, img in enumerate(imgs):
         image = toVisualizeRGBImg(image, locs=infers[i][:, 2:], inf_labels=infers[i][:, 0], inf_confs=infers[i][:, 1],
