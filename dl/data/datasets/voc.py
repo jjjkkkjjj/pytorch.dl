@@ -89,7 +89,10 @@ class VOCSingleDatasetBase(ObjectDetectionDatasetBase):
 
         root = ET.parse(self._annopaths[index]).getroot()
         for obj in root.iter('object'):
-            linds.append(self._class_labels.index(_get_xml_et_value(obj, 'name')))
+            label = _get_xml_et_value(obj, 'name')
+            if label not in self._class_labels:
+                raise ValueError('Invalid label found. \'{}\' was not in labels: {}'.format(label, self._class_labels))
+            linds.append(self._class_labels.index())
 
             bndbox = obj.find('bndbox')
 

@@ -134,8 +134,10 @@ class COCOSingleDatasetBase(ObjectDetectionDatasetBase):
                 name: str
             """
             cat = self._coco.loadCats(anno['category_id'])[0]
-
-            linds.append(self.class_labels.index(cat['name']))
+            label = cat['name']
+            if label not in self._class_labels:
+                raise ValueError('Invalid label found. \'{}\' was not in labels: {}'.format(label, self._class_labels))
+            linds.append(self.class_labels.index(label))
 
             # bbox = [xmin, ymin, w, h]
             xmin, ymin, w, h = anno['bbox']
