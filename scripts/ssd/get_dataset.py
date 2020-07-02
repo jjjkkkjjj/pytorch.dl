@@ -1,4 +1,4 @@
-from dl.data import choices
+from dl.data import *
 
 import argparse
 

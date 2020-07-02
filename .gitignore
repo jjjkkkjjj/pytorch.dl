@@ -8,6 +8,7 @@ weights/checkpoints/*
 weights/results/*
 !weights/results/.gitkeep
 
+dl/train/.debug
 
 # Created by https://www.gitignore.io/api/linux,python,pycharm
 # Edit at https://www.gitignore.io/?templates=linux,python,pycharm

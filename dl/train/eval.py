@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 import numpy as np
 
 sys.path.append('...')
-from dl.data.datasets import _DatasetBase
+from ..data.datasets import _DatasetBase
 from ..models.base import ObjectDetectionModelBase
 from .._utils import _check_ins
 from ..core.boxes.utils import centroids2corners_numpy, iou_numpy

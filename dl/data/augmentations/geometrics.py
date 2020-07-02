@@ -3,7 +3,7 @@ import numpy as np
 import logging
 
 from ._utils import decision
-from dl.core.boxes.utils import iou_numpy, centroids2corners_numpy, corners2centroids_numpy
+from ...core.boxes.utils import iou_numpy, centroids2corners_numpy, corners2centroids_numpy
 from .base import Compose
 
 class RandomExpand(object):
