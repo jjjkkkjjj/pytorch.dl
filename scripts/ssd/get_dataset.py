@@ -1,5 +1,4 @@
-from data.downloader import *
-from data.downloader import choices, _concat_trainval_images
+from dl.data import choices
 
 import argparse
 

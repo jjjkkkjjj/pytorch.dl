@@ -1,13 +1,12 @@
-from data import transforms, target_transforms, augmentations, utils, datasets
+from dl.data import transforms, target_transforms, augmentations, utils
+from dl.data import datasets
 
 from dl.models.ssd300 import SSD300
 from dl.train import *
 
 #from torchvision import transforms > not import!!
 from torch.utils.data import DataLoader
-from torch.optim.adam import Adam
 from torch.optim.sgd import SGD
-import torch
 
 if __name__ == '__main__':
     """

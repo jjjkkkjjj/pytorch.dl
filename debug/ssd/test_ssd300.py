@@ -1,10 +1,8 @@
-from data import datasets
-from data import transforms, target_transforms, augmentations, utils
+from dl.data import datasets
+from dl.data import transforms, target_transforms, utils
 
 from dl.models.ssd300 import SSD300
 from dl.core.inference import toVisualizeRGBImg
-from dl.train.eval import VOC2007Evaluator
-import torch
 from torch.utils.data import DataLoader
 import cv2
 

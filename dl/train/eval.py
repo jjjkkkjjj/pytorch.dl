@@ -1,15 +1,13 @@
 import abc
 import sys
-import torch
-import math
 from torch.utils.data import DataLoader
 import numpy as np
 
 sys.path.append('...')
-from data.datasets.base import _DatasetBase
+from dl.data.datasets import _DatasetBase
 from ..models.base import ObjectDetectionModelBase
 from .._utils import _check_ins
-from ..core.boxes.utils import centroids2corners_numpy, corners2centroids_numpy, iou_numpy
+from ..core.boxes.utils import centroids2corners_numpy, iou_numpy
 
 # mAP: https://datascience.stackexchange.com/questions/25119/how-to-calculate-map-for-detection-task-for-the-pascal-voc-challenge
 # https://towardsdatascience.com/breaking-down-mean-average-precision-map-ae462f623a52
