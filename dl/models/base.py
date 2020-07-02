@@ -1,5 +1,5 @@
 from torchvision.models.utils import load_state_dict_from_url
-import logging
+import logging, os
 
 from .._utils import _check_ins
 from ..core.boxes.dbox import *
@@ -501,7 +501,8 @@ class SSDvggBase(SSDBase):
 def load_vgg_weights(model, name):
     assert isinstance(model, SSDvggBase), "must be inherited SSDvggBase"
 
-    model_dir = weights_path(__file__, _root_num=2, dirname='weights')
+    #model_dir = weights_path(__file__, _root_num=2, dirname='weights')
+    model_dir = os.path.join(os.path.expanduser("~"), 'weights')
 
     model_url = get_model_url(name)
     pretrained_state_dict = load_state_dict_from_url(model_url, model_dir=model_dir)

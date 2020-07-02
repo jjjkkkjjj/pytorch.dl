@@ -4,7 +4,7 @@ import os, logging, re, torch
 import matplotlib.pyplot as plt
 
 class SaveManager(object):
-    def __init__(self, modelname, interval, max_checkpoints, plot_yrange=(0, 14), savedir='./weights'):
+    def __init__(self, modelname, interval, max_checkpoints, plot_yrange=(0, 14), savedir=os.path.join(os.path.expanduser("~"), 'weights')):
         """
         :param modelname: str, saved model name.
         :param interval: int, save for each designated iteration
@@ -32,7 +32,9 @@ class SaveManager(object):
         if not os.path.isdir(savedir):
             raise FileNotFoundError('{} was not found, please make it'.format(savedir))
         if not os.path.isdir(save_checkpoints_dir):
-            raise FileNotFoundError('{} was not found, please make it'.format(save_checkpoints_dir))
+            os.mkdir(save_checkpoints_dir)
+            logging.info('Created directory: {}'.format(save_checkpoints_dir))
+            #raise FileNotFoundError('{} was not found, please make it'.format(save_checkpoints_dir))
 
         self.savedir = savedir
         self.save_checkpoints_dir = save_checkpoints_dir
