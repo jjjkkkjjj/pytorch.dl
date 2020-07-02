@@ -1,7 +1,7 @@
 from dl.data import transforms, target_transforms, augmentations, utils
 from dl.data import datasets
 
-from dl.models.ssd300 import SSD300
+from dl.models.ssd.ssd300 import SSD300
 from dl.train import *
 
 #from torchvision import transforms > not import!!

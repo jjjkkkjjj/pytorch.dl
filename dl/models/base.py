@@ -1,7 +1,5 @@
 from torchvision.models.utils import load_state_dict_from_url
-import abc
 import logging
-import torch
 
 from .._utils import _check_ins
 from ..core.boxes.dbox import *
@@ -11,7 +9,7 @@ from ..core.inference import *
 from ..core.boxes.codec import *
 from .._utils import weights_path, _check_norm
 from ..core.inference import InferenceBox, toVisualizeRGBImg
-from ..models.vgg_base import get_model_url
+from dl.models.vgg.vgg_base import get_model_url
 
 class ObjectDetectionModelBase(nn.Module):
 
