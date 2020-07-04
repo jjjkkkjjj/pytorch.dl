@@ -1,7 +1,8 @@
 from dl.data.object import datasets, utils, target_transforms, transforms, augmentations
-
-from dl.models.ssd.ssd300 import SSD300
-
+from dl.loss.ssd import SSDLoss
+from dl.models.ssd import SSD300
+from dl.optim.scheduler import IterStepLR
+from dl.log import *
 
 #from torchvision import transforms > not import!!
 from torch.utils.data import DataLoader
@@ -51,7 +52,7 @@ if __name__ == '__main__':
     optimizer = SGD(model.parameters(), lr=1e-3, momentum=0.9, weight_decay=5e-4)
     #optimizer = Adam(model.parameters(), lr=1e-3, weight_decay=5e-4)
     #iter_sheduler = IterMultiStepLR(optimizer, milestones=(10, 20, 30), gamma=0.1, verbose=True)
-    iter_sheduler = SSDIterStepLR(optimizer, step_size=60000, gamma=0.1, verbose=True)
+    iter_sheduler = IterStepLR(optimizer, step_size=60000, gamma=0.1, verbose=True)
     """
     save_manager = SaveManager(modelname='ssd300', interval=10, max_checkpoints=3)
     log_manager = LogManager(interval=10, save_manager=save_manager, loss_interval=10, live_graph=None)
@@ -59,9 +60,7 @@ if __name__ == '__main__':
 
     trainer.train(30, train_loader)
     """
-    save_manager = SaveManager(modelname='ssd300', interval=5000, max_checkpoints=3)
-    log_manager = LogManager(interval=10, save_manager=save_manager, loss_interval=10, live_graph=None)
-    trainer = TrainLogger(model, loss_func=SSDLoss(), optimizer=optimizer, scheduler=iter_sheduler,
-                          log_manager=log_manager)
+    save_manager = SaveManager(modelname='ssd300', interval=100, max_checkpoints=3, plot_interval=10)
 
-    trainer.train(80000, train_loader)#, evaluator=VOC2007Evaluator(val_dataset, iteration_interval=10))
+    trainer = TrainObjectDetectionConsoleLogger(SSDLoss(), model, optimizer, iter_sheduler)
+    trainer.train_iter(save_manager, 80000, train_loader)

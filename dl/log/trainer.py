@@ -1,111 +1,240 @@
 import math
 import torch
 from torch import nn
-import time, logging
+import time, logging, abc, sys, os
 
-from .log import LogManager
-from dl._utils import _check_ins
-from dl.models.ssd.base import SSDBase
+from .._utils import _check_ins
+from ..models.base import ModelBase
+from torch.optim.lr_scheduler import _LRScheduler
+from torch.optim.optimizer import Optimizer
+from .save import SaveManager
+
 """
     ref: https://nextjournal.com/gkoehler/pytorch-mnist
 """
-class TrainLogger(object):
-    model: SSDBase
+class TrainLoggerBase(object):
+    model: ModelBase
+    optimizer: Optimizer
+    scheduler: _LRScheduler
 
-    def __init__(self, model, loss_func, optimizer, log_manager, scheduler=None):
+    def __init__(self, loss_module, model, optimizer, scheduler=None):
+        self.loss_module = loss_module
+        self.model = _check_ins('model', model, (ModelBase, nn.DataParallel))
+        self.optimizer = _check_ins('optimizer', optimizer, Optimizer)
+        self.scheduler = _check_ins('scheduler', scheduler, _LRScheduler, allow_none=True)
 
-        self._model = _check_ins('model', model, (SSDBase, nn.DataParallel))
+        self._now_epoch = -1
+        self._now_iteration = -1
 
-        if torch.cuda.is_available():
-            if not 'cuda' in self.model.device.type:
-                logging.warning('You can use CUDA device but you didn\'t set CUDA device.'
-                                'To use CUDA, call \"model.cuda()\"')
-        self.device = self.model.device
-        torch.set_default_tensor_type(torch.FloatTensor)
-
-        # convert to float
-        #self.model = self.model.to(dtype=torch.float)
-        self.loss_func = loss_func
-        self.optimizer = optimizer
-
-        self.scheduler = scheduler
-
-        self.test_losses = []
-
-        if isinstance(log_manager, LogManager):
-            self.log_manager = log_manager
-        else:
-            raise ValueError('logmanager must be \'Logmanager\' instance')
-
+        # losses_dict is dict of list
+        self._losses = {}
+        self._x = []
+        self._mode = None
 
     @property
-    def model(self):
-        if isinstance(self._model, nn.DataParallel):
-            return self._model.module
+    def now_epoch(self):
+        return self._now_epoch
+    @property
+    def now_iteration(self):
+        return self._now_iteration
+
+    @property
+    def device(self):
+        if isinstance(self.model, nn.DataParallel):
+            return self.model.module.device
         else:
-            return self._model
+            return self.model.device
+
+    @property
+    def mode(self):
+        return self._mode
+    @mode.setter
+    def mode(self, val):
+        if not val in ['epoch', 'iteration']:
+            raise ValueError()
+        self._mode = val
+
+    @property
+    def isEpochMode(self):
+        if self._mode is None:
+            raise NotImplementedError('Must set mode')
+        return self._mode == 'epoch'
+    @property
+    def isIterationMode(self):
+        if self._mode is None:
+            raise NotImplementedError('Must set mode')
+        return self._mode == 'iteration'
 
 
-    def train(self, max_iterations, train_loader, start_iteration=0):#, evaluator=None):
+    def __getattr__(self, item):
         """
-        :param max_iterations: int, how many iterations during training
-        :param train_loader: Dataloader, must return Tensor of images and ground truthes
-        :param start_iteration: int
-        :param evaluator: EvaluatorBase, if it's None, Evaluation will not be run
+        return losses_dict value too as attribution
+        :param item:
         :return:
         """
+        if item in self._losses.keys():
+            return self._losses[item]
+        raise AttributeError('\'{}\' object has no attribute \'{}\''.format(type(self).__name__, item))
 
-        #evaluator = _check_ins('evaluator', evaluator, EvaluatorBase, allow_none=True)
+    def set_losses(self, x, names, losses):
+        for lossname, lossval in zip(names, losses):
+            assert isinstance(lossval, (int, float)), "loss value must be number"
+            if not lossname in self._losses.keys():
+                self._losses[lossname] = []
+            self._losses[lossname] += [lossval]
+        self._x += [x]
 
-        # calculate epochs
-        iter_per_epoch = math.ceil(len(train_loader.dataset) / float(max_iterations))
-        epochs = math.ceil(max_iterations / float(iter_per_epoch))
+    def train_epoch(self, savemanager, max_epochs, train_loader, start_epoch=0):
+        max_iterations = max_epochs * len(train_loader.dataset)
+        start_iteration = start_epoch * len(train_loader.dataset)
 
-        self.model.train()
+        self._mode = 'epoch'
 
-        self.log_manager.initialize(max_iterations, start_iteration=start_iteration)
+        self._train(savemanager, max_iterations, train_loader, start_iteration)
 
-        for epoch in range(1, epochs + 1):
-            if self.log_manager.isFinish:
-                break
+    def train_iter(self, savemanager, max_iterations, train_loader, start_iteration=0):
+        self._mode = 'iteration'
 
-            for _iteration, (images, targets) in enumerate(train_loader):
-                self.optimizer.zero_grad()
+        self._train(savemanager, max_iterations, train_loader, start_iteration)
 
-                images = images.to(self.device)
-                targets = [target.to(self.device) for target in targets]
-                start = time.time()
+    def _train(self, savemanager, max_iterations, train_loader, start_iteration):
+        _ = _check_ins('savemanager', savemanager, SaveManager)
 
-                # set variable
-                # images.requires_grad = True
-                # targets.requires_grad = True
-                pos_indicator, predicts, gts = self.model(images, targets)
+        iter_per_epoch = math.ceil(len(train_loader.dataset) / float(train_loader.batch_size))
+        max_epochs = math.ceil(max_iterations / float(iter_per_epoch))
 
-                confloss, locloss = self.loss_func(pos_indicator, predicts, gts)
-                loss = confloss + self.loss_func.alpha * locloss
-                loss.backward()  # calculate gradient for value with requires_grad=True, shortly back propagation
-                #print(self.model.feature_layers.convRL1_1.conv.weight.grad)
-                #print(self.model.localization_layers.conv_loc_1.weight.grad)
-                self.optimizer.step()
-                if self.scheduler:
-                    self.scheduler.step()
+        self._now_epoch = int(start_iteration / len(train_loader.dataset))
+        self._now_iteration = start_iteration
+        start_epoch = self._now_epoch
 
-                end = time.time()
+        train_iterator = iter(train_loader)
+        for now_iteration in range(start_iteration, max_iterations):
+            item = next(train_iterator)
 
-                # update train
-                self.log_manager.update_iteration(self.model, epoch, _iteration + 1, batch_num=len(images), data_num=len(train_loader.dataset),
-                                                  iter_per_epoch=len(train_loader), loclossval=locloss.item(), conflossval=confloss.item(),
-                                                  lossval=loss.item(), iter_time=end-start)
-                """
-                too slow...
-                if evaluator and self.log_manager.now_iteration % evaluator.iteration_interval:
-                    self.model.eval()
-                    print(evaluator(self.model))
-                    self.model.train()
-                """
-                if self.log_manager.isFinish:
-                    break
+            iter_starttime = time.time()
+
+            self.optimizer.zero_grad()
+            names, losses = self.learn(*item)
+            self.optimizer.step()
+            if self.scheduler:
+                self.scheduler.step()
+
+            iter_time = time.time() - iter_starttime
+
+            _ = _check_ins('names', names, (list, tuple))
+            _ = _check_ins('losses_dict', losses, (list, tuple))
+
+            self._now_iteration += 1
+
+            percentage = 100. * (self.now_iteration % iter_per_epoch) / iter_per_epoch
+            self.update_log(self.now_epoch, self.now_iteration, percentage, iter_time, names, losses)
+            if self.isIterationMode:
+                if self.now_iteration % savemanager.plot_interval == 0 or \
+                        self.now_iteration == start_iteration + 1 or \
+                             self.now_iteration == max_iterations:
+                    self.set_losses(self.now_iteration, names, losses)
+
+                saved_path, removed_path = savemanager.update_iteration(self.model, self.now_iteration, max_iterations)
+                self.update_checkpointslog(saved_path, removed_path)
+
+            if self.now_iteration % len(train_loader.dataset) == 0:
+                self._now_epoch += 1
+
+                if self.isEpochMode:
+                    if self.now_epoch % savemanager.plot_interval == 0 or \
+                            self.now_epoch == start_epoch + 1 or \
+                                 self.now_epoch == max_epochs:
+                        self.set_losses(self.now_epoch, names, losses)
+
+                    saved_path, removed_path = savemanager.update_epoch(self.model, self.now_epoch, max_epochs)
+                    self.update_checkpointslog(saved_path, removed_path)
+
+        if self.isIterationMode:
+            savemanager.finish(self.model, self.optimizer, self.scheduler, 'iteration', self._x, names, self._losses)
+        elif self.isEpochMode:
+            savemanager.finish(self.model, self.optimizer, self.scheduler, 'epoch', self._x, names, self._losses)
+        else:
+            raise ValueError()
 
 
-        print('\nTraining finished')
-        self.log_manager.finish(self.model)
+    def update_log(self, epoch, iteration, percentage, calc_time, names, losses):
+        """
+        this function will be called by train_iter only
+        :param epoch
+        :param iteration:
+        :param percentage:
+        :param calc_time:
+        :param names: list of str
+        :param losses: list of float
+        :return:
+        """
+        iter_template = '\rTraining... Epoch: {}, Iter: {},\t {:.0f}%\t{}\tIter time: {:.4f}'
+        loss_template = ''
+        for name, loss in zip(names, losses):
+            loss_template += '{}: {:.6f} '.format(name, loss)
+
+        sys.stdout.write(iter_template.format(epoch, iteration, percentage, loss_template, calc_time))
+        sys.stdout.flush()
+
+    def update_checkpointslog(self, saved_path, removed_path):
+        if saved_path == '':
+            return
+
+        # append information for verbose
+        saved_info = '\nSaved model to {}\n'.format(saved_path)
+        if removed_path != '':
+            removed_info = ' and removed {}'.format(removed_path)
+            saved_info = '\n' + 'Saved model as {}{}\n'.format(os.path.basename(saved_path), removed_info)
+            print(saved_info)
+        else:
+            print(saved_info)
+
+    @abc.abstractmethod
+    def learn(self, *items):
+        """
+        :param items: the value returned by train_loader
+        :return:
+            names: list of str
+            losses: list of float
+        """
+        raise NotImplementedError()
+
+
+class TrainConsoleLoggerBase(TrainLoggerBase):
+    pass
+
+class TrainJupyterLoggerBase(TrainLoggerBase):
+
+    def update_checkpointslog(self, saved_path, removed_path):
+        if saved_path == '':
+            return
+
+        # append information for verbose
+        saved_info = '\nSaved model to {}\n'.format(saved_path)
+        if removed_path != '':
+            removed_info = '\nRemoved {}'.format(removed_path)
+            saved_info = '\n' + 'Saved model as {}{}'.format(os.path.basename(saved_path), removed_info)
+            self.live_graph.update_info(saved_info)
+        else:
+            print(saved_info)
+
+
+from ..models.base import ObjectDetectionModelBase
+class TrainObjectDetectionConsoleLogger(TrainConsoleLoggerBase):
+    model: ObjectDetectionModelBase
+
+    def __init__(self, loss_module, model, optimizer, scheduler=None):
+        super().__init__(loss_module, model, optimizer, scheduler)
+        _ = _check_ins('model', model, (ObjectDetectionModelBase, nn.DataParallel))
+
+    def learn(self, images, targets):
+        images = images.to(self.device)
+        targets = [target.to(self.device) for target in targets]
+
+        pos_indicator, predicts, gts = self.model(images, targets)
+
+        confloss, locloss = self.loss_module(pos_indicator, predicts, gts)
+        loss = confloss + self.loss_module.alpha * locloss
+        loss.backward()
+
+        return ['total', 'loc', 'conf'], [loss.item(), locloss.item(), confloss.item()]

@@ -2,7 +2,27 @@ from torch import nn
 import torch
 import abc
 
-class ObjectDetectionModelBase(nn.Module):
+class ModelBase(nn.Module):
+    @property
+    def device(self):
+        devices = ({param.device for param in self.parameters()} |
+                   {buf.device for buf in self.buffers()})
+        if len(devices) != 1:
+            raise RuntimeError('Cannot determine device: {} different devices found'
+                               .format(len(devices)))
+        return next(iter(devices))
+
+    def load_weights(self, path):
+        """
+        :param path: str
+        :return:
+        """
+        self.load_state_dict(torch.load(path, map_location=lambda storage, loc: storage))
+
+    def init_weights(self):
+        raise NotImplementedError()
+
+class ObjectDetectionModelBase(ModelBase):
 
     def __init__(self, class_labels, input_shape, batch_norm):
         """
@@ -59,23 +79,5 @@ class ObjectDetectionModelBase(nn.Module):
         """
         pass
 
-    @property
-    def device(self):
-        devices = ({param.device for param in self.parameters()} |
-                   {buf.device for buf in self.buffers()})
-        if len(devices) != 1:
-            raise RuntimeError('Cannot determine device: {} different devices found'
-                               .format(len(devices)))
-        return next(iter(devices))
 
-    def load_weights(self, path):
-        """
-        :param path: str
-        :return:
-        """
-        self.load_state_dict(torch.load(path, map_location=lambda storage, loc: storage))
-
-
-    def init_weights(self):
-        raise NotImplementedError()
 

@@ -102,7 +102,9 @@ from torch.optim.sgd import SGD
 
 from dl.data.object import datasets, utils, target_transforms, transforms, augmentations
 from dl.models.ssd import *
-
+from dl.loss.ssd import SSDLoss
+from dl.optim.scheduler import IterMultiStepLR
+from dl.log import *
 
 
 rootdir = args.dataset_rootdir
@@ -215,15 +217,13 @@ elif args.optimizer == 'Adam':
 else:
     assert False, "Invalid optimizer"
 
-iter_scheduler = SSDIterMultiStepLR(optimizer, milestones=args.steplr_milestones, gamma=args.steplr_gamma)
+iter_scheduler = IterMultiStepLR(optimizer, milestones=args.steplr_milestones, gamma=args.steplr_gamma)
 logging.info('Multi Step Info:'
              '\nmilestones: {}'
              '\ngamma: {}\n'.format(args.steplr_milestones, args.steplr_gamma))
 
-save_manager = SaveManager(modelname=args.model_name, interval=args.checkpoints_interval, max_checkpoints=15)
-log_manager = LogManager(interval=10, save_manager=save_manager, loss_interval=10, live_graph=None)
-trainer = TrainLogger(model, loss_func=SSDLoss(alpha=args.loss_alpha), optimizer=optimizer, scheduler=iter_scheduler,
-                      log_manager=log_manager)
+save_manager = SaveManager(modelname=args.model_name, interval=args.checkpoints_interval, max_checkpoints=15, plot_interval=100)
+trainer = TrainObjectDetectionConsoleLogger(loss_module=SSDLoss(alpha=args.loss_alpha), model=model, optimizer=optimizer, scheduler=iter_scheduler)
 
 logging.info('Save Info:'
              '\nfilename: {}'
@@ -231,4 +231,4 @@ logging.info('Save Info:'
 
 logging.info('Start Training\n\n')
 
-trainer.train(args.max_iteration, train_loader, start_iteration=args.start_iteration)
+trainer.train_iter(save_manager, args.max_iteration, train_loader, start_iteration=args.start_iteration)

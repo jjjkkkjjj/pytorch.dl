@@ -3,6 +3,8 @@ from dl.data.text.utils import batch_ind_fn_droptexts
 
 from dl.models import TextBoxesPP
 from dl.loss.textboxespp import TextBoxLoss
+from dl.optim.scheduler import IterStepLR
+from dl.log import *
 
 #from torchvision import transforms > not import!!
 from torch.utils.data import DataLoader
@@ -52,12 +54,10 @@ if __name__ == '__main__':
 
     optimizer = Adam(model.parameters(), lr=5e-4, weight_decay=5e-4)
     # iter_sheduler = IterMultiStepLR(optimizer, milestones=(10, 20, 30), gamma=0.1, verbose=True)
-    iter_sheduler = SSDIterStepLR(optimizer, step_size=60000, gamma=0.1, verbose=True)
+    iter_sheduler = IterStepLR(optimizer, step_size=60000, gamma=0.1, verbose=True)
 
-    save_manager = SaveManager(modelname='test', interval=5000, max_checkpoints=3)
-    log_manager = LogManager(interval=10, save_manager=save_manager, loss_interval=10, live_graph=None)
-    trainer = TrainLogger(model, loss_func=TextBoxLoss(alpha=0.2), optimizer=optimizer, scheduler=iter_sheduler,
-                          log_manager=log_manager)
+    save_manager = SaveManager(modelname='test', interval=5000, max_checkpoints=3, plot_interval=100)
 
-    trainer.train(80000, train_loader)  # , evaluator=VOC2007Evaluator(val_dataset, iteration_interval=10))
+    trainer = TrainObjectDetectionConsoleLogger(TextBoxLoss(alpha=0.2), model, optimizer, iter_sheduler)
+    trainer.train_iter(save_manager, 80000, train_loader)  # , evaluator=VOC2007Evaluator(val_dataset, iteration_interval=10))
 
