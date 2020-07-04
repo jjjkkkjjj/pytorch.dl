@@ -28,13 +28,12 @@ if __name__ == '__main__':
     test_dataset = datasets.SynthTextDataset(ignore=None, transform=transform, target_transform=target_transform, augmentation=augmentation)
 
     model = TextBoxesPP(input_shape=(size[0], size[1], 3)).cuda()
-    model.load_vgg_weights()
     print(model)
     #model.load_weights('./weights/model_icdar15.pth')
-    model.load_weights('weights/results/train-all-stage2-batch8_i-24000.pth')
+    model.load_weights('../../weights/train-all-stage2-batch8_i-24000.pth')
     model.eval()
 
-    image = cv2.cvtColor(cv2.imread('assets/test.png'), cv2.COLOR_BGR2RGB)
+    image = cv2.cvtColor(cv2.imread('../../scripts/textboxes++/assets/test.png'), cv2.COLOR_BGR2RGB)
     infers, imgs, orig_imgs = model.infer(cv2.resize(image, size), visualize=True, toNorm=True)
     for i, img in enumerate(imgs):
         image = toVisualizeInfQuadsRGBimg(image, poly_pts=infers[i][:, 6:], inf_labels=infers[i][:, 0],
