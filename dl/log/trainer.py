@@ -5,6 +5,7 @@ import time, logging, abc, sys, os
 
 from .._utils import _check_ins
 from ..models.base import ModelBase
+from .graph import LiveGraph
 from torch.optim.lr_scheduler import _LRScheduler
 from torch.optim.optimizer import Optimizer
 from .save import SaveManager
@@ -204,6 +205,15 @@ class TrainConsoleLoggerBase(TrainLoggerBase):
     pass
 
 class TrainJupyterLoggerBase(TrainLoggerBase):
+    live_graph: LiveGraph
+    def __init__(self, live_graph, loss_module, model, optimizer, scheduler=None):
+        self.live_graph = _check_ins('live_graph', live_graph, LiveGraph)
+        super().__init__(loss_module, model, optimizer, scheduler)
+
+
+    def set_losses(self, x, names, losses):
+        super().set_losses(x, names, losses)
+        self.live_graph.update(self.now_epoch, self.now_iteration, self._x, names, self._losses)
 
     def update_checkpointslog(self, saved_path, removed_path):
         if saved_path == '':
@@ -225,6 +235,25 @@ class TrainObjectDetectionConsoleLogger(TrainConsoleLoggerBase):
 
     def __init__(self, loss_module, model, optimizer, scheduler=None):
         super().__init__(loss_module, model, optimizer, scheduler)
+        _ = _check_ins('model', model, (ObjectDetectionModelBase, nn.DataParallel))
+
+    def learn(self, images, targets):
+        images = images.to(self.device)
+        targets = [target.to(self.device) for target in targets]
+
+        pos_indicator, predicts, gts = self.model(images, targets)
+
+        confloss, locloss = self.loss_module(pos_indicator, predicts, gts)
+        loss = confloss + self.loss_module.alpha * locloss
+        loss.backward()
+
+        return ['total', 'loc', 'conf'], [loss.item(), locloss.item(), confloss.item()]
+
+class TrainObjectDetectionJupyterLogger(TrainJupyterLoggerBase):
+    model: ObjectDetectionModelBase
+
+    def __init__(self, live_graph, loss_module, model, optimizer, scheduler=None):
+        super().__init__(live_graph, loss_module, model, optimizer, scheduler)
         _ = _check_ins('model', model, (ObjectDetectionModelBase, nn.DataParallel))
 
     def learn(self, images, targets):
