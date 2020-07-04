@@ -1,4 +1,4 @@
-from dl.train.eval import calc_PR, _load_debugfile
+from dl.eval.objdetection import calc_PR, _load_debugfile
 
 import numpy as np
 

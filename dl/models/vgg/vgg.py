@@ -1,5 +1,5 @@
 from torch import nn
-from ...models.vgg.vgg_base import VGGBase
+from ...models.vgg.base import VGGBase
 from ..layers import Conv2d
 from collections import OrderedDict
 """

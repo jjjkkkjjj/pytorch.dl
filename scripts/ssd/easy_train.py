@@ -94,17 +94,15 @@ parser.add_argument('--loss_alpha', default=1.0, type=float,
                     help='Loss\'s alpha')
 args = parser.parse_args()
 
-import torch
 import logging
 logging.basicConfig(level=logging.INFO)
-from torch import nn
 from torch.utils.data import DataLoader
 from torch.optim.adam import Adam
 from torch.optim.sgd import SGD
 
 from dl.data.object import datasets, utils, target_transforms, transforms, augmentations
 from dl.models.ssd import *
-from dl.train import *
+
 
 
 rootdir = args.dataset_rootdir

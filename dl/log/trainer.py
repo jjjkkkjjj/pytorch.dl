@@ -4,9 +4,8 @@ from torch import nn
 import time, logging
 
 from .log import LogManager
-from .._utils import _check_ins
-from ..models.ssd.base import SSDBase
-from .eval import EvaluatorBase
+from dl._utils import _check_ins
+from dl.models.ssd.base import SSDBase
 """
     ref: https://nextjournal.com/gkoehler/pytorch-mnist
 """

@@ -261,7 +261,7 @@ Note that `None` is available to set these instances
   
   optimizer = SGD(model.parameters(), lr=1e-3, momentum=0.9, weight_decay=5e-4) # slower
   #optimizer = Adam(model.parameters(), lr=1e-3, weight_decay=5e-4) # faster
-  iter_sheduler = SSDIterMultiStepLR(optimizer, milestones=(40000, 50000), gamma=0.1, verbose=True)
+  iter_sheduler = IterMultiStepLR(optimizer, milestones=(40000, 50000), gamma=0.1, verbose=True)
   
   save_manager = SaveManager(modelname='ssd300-voc2007', interval=5000, max_checkpoints=15, plot_yrange=(0, 8))
   log_manager = LogManager(interval=10, save_manager=save_manager, loss_interval=10, live_graph=LiveGraph((0, 8)))

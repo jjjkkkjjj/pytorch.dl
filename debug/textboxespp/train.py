@@ -1,16 +1,12 @@
-from dl.data.text import datasets, target_transforms, transforms, augmentations
+from dl.data.text import datasets, target_transforms, transforms
 from dl.data.text.utils import batch_ind_fn_droptexts
 
 from dl.models import TextBoxesPP
-from dl.train import *
-from dl.models.ssd.loss import TextBoxLoss
+from dl.loss.textboxespp import TextBoxLoss
 
 #from torchvision import transforms > not import!!
 from torch.utils.data import DataLoader
 from torch.optim.adam import Adam
-
-from torch.optim.sgd import SGD
-import torch
 
 if __name__ == '__main__':
 
@@ -55,7 +51,7 @@ if __name__ == '__main__':
     #model.load_weights('./weights/model_icdar15.pth')
 
     optimizer = Adam(model.parameters(), lr=5e-4, weight_decay=5e-4)
-    # iter_sheduler = SSDIterMultiStepLR(optimizer, milestones=(10, 20, 30), gamma=0.1, verbose=True)
+    # iter_sheduler = IterMultiStepLR(optimizer, milestones=(10, 20, 30), gamma=0.1, verbose=True)
     iter_sheduler = SSDIterStepLR(optimizer, step_size=60000, gamma=0.1, verbose=True)
 
     save_manager = SaveManager(modelname='test', interval=5000, max_checkpoints=3)

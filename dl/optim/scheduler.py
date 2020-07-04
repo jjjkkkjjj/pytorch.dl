@@ -5,7 +5,7 @@ from torch.optim.lr_scheduler import MultiStepLR, StepLR, _LRScheduler
 class _IterLRScheduler(_LRScheduler):
     pass
 
-class SSDIterMultiStepLR(MultiStepLR, _IterLRScheduler):
+class IterMultiStepLR(MultiStepLR, _IterLRScheduler):
     def __init__(self, optimizer, milestones=(40000, 50000, 60000), gamma=0.1, last_iteration=-1, verbose=True):
         super().__init__(optimizer, milestones, gamma, last_epoch=last_iteration)
         self.last_iteration = last_iteration
@@ -21,7 +21,7 @@ class SSDIterMultiStepLR(MultiStepLR, _IterLRScheduler):
         self._prev_lr = ret
         return self._prev_lr
 
-class SSDIterStepLR(SSDIterMultiStepLR, _IterLRScheduler):
+class IterStepLR(IterMultiStepLR, _IterLRScheduler):
     def __init__(self, optimizer, step_size=60000, gamma=0.1, last_iteration=-1, verbose=True):
         max_size = 10000000000
         if step_size > max_size:
@@ -200,7 +200,7 @@ class _IterLRScheduler(object):
 from bisect import bisect_right
 
 # custom scheduler (same as MultiStepLR)
-class SSDIterMultiStepLR(_IterLRScheduler):
+class IterMultiStepLR(_IterLRScheduler):
     def __init__(self, optimizer, milestones=(40000, 50000, 60000), gamma=0.1, last_iteration=-1, verbose=True):
         super().__init__(optimizer, last_iteration)
         self.milestones = Counter(milestones)

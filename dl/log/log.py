@@ -1,9 +1,8 @@
 import logging
 import os, sys
-import numpy as np
 
 from .save import SaveManager
-from .graph import LiveGraph
+from dl.log.jupyter.graph import LiveGraph
 
 class LogManager(object):
     def __init__(self, interval, save_manager, loss_interval=1, live_graph=None):

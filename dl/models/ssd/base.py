@@ -7,7 +7,7 @@ from .core.boxes.dbox import *
 from .core.predict import *
 from ..layers import *
 from .core.inference import *
-from ..vgg.vgg_base import get_model_url
+from ..vgg.base import get_model_url
 from ..base import ObjectDetectionModelBase
 
 
