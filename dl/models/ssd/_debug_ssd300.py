@@ -102,15 +102,15 @@ class SSD(nn.Module):
 
         Conv2d.batch_norm = False
         vgg_layers = [
-            *Conv2d.relu_block('1', 2, 3, 64),
+            *Conv2d.block_relumpool('1', 2, 3, 64),
 
-            *Conv2d.relu_block('2', 2, 64, 128),
+            *Conv2d.block_relumpool('2', 2, 64, 128),
 
-            *Conv2d.relu_block('3', 3, 128, 256, pool_ceil_mode=True),
+            *Conv2d.block_relumpool('3', 3, 128, 256, pool_ceil_mode=True),
 
-            *Conv2d.relu_block('4', 3, 256, 512),
+            *Conv2d.block_relumpool('4', 3, 256, 512),
 
-            *Conv2d.relu_block('5', 3, 512, 512, pool_k_size=(3, 3), pool_stride=(1, 1), pool_padding=1),
+            *Conv2d.block_relumpool('5', 3, 512, 512, pool_k_size=(3, 3), pool_stride=(1, 1), pool_padding=1),
             # replace last maxpool layer's kernel and stride
 
             # Atrous convolution

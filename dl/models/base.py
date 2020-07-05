@@ -32,7 +32,6 @@ class ImageRecognitionBase(ModelBase):
 
         self._class_labels = class_labels
         assert len(input_shape) == 3, "input dimension must be 3"
-        assert input_shape[0] == input_shape[1], "input must be square size"
         self._input_shape = input_shape
 
     @property

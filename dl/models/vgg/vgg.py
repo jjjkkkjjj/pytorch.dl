@@ -23,15 +23,15 @@ class VGGBase11_bn(VGGBase):
     def __init__(self, input_channels, **kwargs):
         Conv2d.batch_norm = True
         conv_layers = [
-            *Conv2d.relu_block('1', 1, input_channels, 64),
+            *Conv2d.block_relumpool('1', 1, input_channels, 64),
         
-            *Conv2d.relu_block('2', 1, 64, 128),
+            *Conv2d.block_relumpool('2', 1, 64, 128),
 
-            *Conv2d.relu_block('3', 2, 128, 256),
+            *Conv2d.block_relumpool('3', 2, 128, 256),
 
-            *Conv2d.relu_block('4', 2, 256, 512),
+            *Conv2d.block_relumpool('4', 2, 256, 512),
 
-            *Conv2d.relu_block('5', 2, 512, 512),
+            *Conv2d.block_relumpool('5', 2, 512, 512),
         ]
 
         super().__init__(model_name='vgg11_bn', conv_layers=nn.ModuleDict(OrderedDict(conv_layers)), **kwargs)
@@ -41,15 +41,15 @@ class VGGBase11(VGGBase):
     def __init__(self, input_channels, **kwargs):
         Conv2d.batch_norm = False
         conv_layers = [
-            *Conv2d.relu_block('1', 1, input_channels, 64),
+            *Conv2d.block_relumpool('1', 1, input_channels, 64),
 
-            *Conv2d.relu_block('2', 1, 64, 128),
+            *Conv2d.block_relumpool('2', 1, 64, 128),
 
-            *Conv2d.relu_block('3', 2, 128, 256),
+            *Conv2d.block_relumpool('3', 2, 128, 256),
 
-            *Conv2d.relu_block('4', 2, 256, 512),
+            *Conv2d.block_relumpool('4', 2, 256, 512),
 
-            *Conv2d.relu_block('5', 2, 512, 512)
+            *Conv2d.block_relumpool('5', 2, 512, 512)
         ]
 
         super().__init__(model_name='vgg11', conv_layers=nn.ModuleDict(OrderedDict(conv_layers)), **kwargs)
@@ -58,15 +58,15 @@ class VGGBase16_bn(VGGBase):
     def __init__(self, input_channels, **kwargs):
         Conv2d.batch_norm = True
         conv_layers = [
-            *Conv2d.relu_block('1', 2, input_channels, 64),
+            *Conv2d.block_relumpool('1', 2, input_channels, 64),
 
-            *Conv2d.relu_block('2', 2, 64, 128),
+            *Conv2d.block_relumpool('2', 2, 64, 128),
 
-            *Conv2d.relu_block('3', 3, 128, 256),
+            *Conv2d.block_relumpool('3', 3, 128, 256),
 
-            *Conv2d.relu_block('4', 3, 256, 512),
+            *Conv2d.block_relumpool('4', 3, 256, 512),
 
-            *Conv2d.relu_block('5', 3, 512, 512),
+            *Conv2d.block_relumpool('5', 3, 512, 512),
         ]
 
         super().__init__(model_name='vgg16_bn', conv_layers=nn.ModuleDict(OrderedDict(conv_layers)), **kwargs)
@@ -75,15 +75,15 @@ class VGGBase16(VGGBase):
     def __init__(self, input_channels, **kwargs):
         Conv2d.batch_norm = False
         conv_layers = [
-            *Conv2d.relu_block('1', 2, input_channels, 64),
+            *Conv2d.block_relumpool('1', 2, input_channels, 64),
 
-            *Conv2d.relu_block('2', 2, 64, 128),
+            *Conv2d.block_relumpool('2', 2, 64, 128),
 
-            *Conv2d.relu_block('3', 3, 128, 256),
+            *Conv2d.block_relumpool('3', 3, 128, 256),
 
-            *Conv2d.relu_block('4', 3, 256, 512),
+            *Conv2d.block_relumpool('4', 3, 256, 512),
 
-            *Conv2d.relu_block('5', 3, 512, 512),
+            *Conv2d.block_relumpool('5', 3, 512, 512),
         ]
 
         super().__init__(model_name='vgg16', conv_layers=nn.ModuleDict(OrderedDict(conv_layers)), **kwargs)

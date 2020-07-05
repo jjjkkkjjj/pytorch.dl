@@ -53,11 +53,11 @@ class Conv2d:
     batch_norm = True
 
     @staticmethod
-    def relu_block(order, block_num, in_channels, out_channels, **kwargs):
+    def block_relumpool(order, block_num, in_channels, out_channels, **kwargs):
         """
         :param order: int or str
         :param block_num: int, how many conv layers are sequenced
-            NOTE: layer's name *{order}_{number in relu_block}. * represents layer name.
+            NOTE: layer's name *{order}_{number in block_relumpool}. * represents layer name.
         :param in_channels: int
         :param out_channels: int
         :param kwargs: key lists are below;
@@ -88,7 +88,7 @@ class Conv2d:
 
         in_c = in_channels
         layers = []
-        # append conv relu_block
+        # append conv block_relumpool
         for bnum in range(block_num):
             postfix = '{0}_{1}'.format(order, bnum + 1)
             if not batch_norm:
@@ -123,7 +123,7 @@ class Conv2d:
         """
         :param order: int or str
         :param block_num: int, how many conv layers are sequenced
-            NOTE: layer's name *{order}_{number in relu_block}. * represents layer name.
+            NOTE: layer's name *{order}_{number in block}. * represents layer name.
         :param in_channels: int or tuple
         :param out_channels: int or tuple
         :param kwargs:
@@ -191,3 +191,20 @@ class Conv2d:
                 ('conv{}'.format(postfix), nn.Conv2d(in_channels, out_channels, **kwargs)),
                 ('bn{}'.format(postfix), nn.BatchNorm2d(out_channels))
             ]
+
+class BidirectionalLSTM(nn.Module):
+    def __init__(self, in_size, hidden_size, out_size):
+        super().__init__()
+
+        self.lstm = nn.LSTM(in_size, hidden_size, bidirectional=True)
+        self.gather = nn.Linear(hidden_size*2, out_size)
+
+    def forward(self, x):
+        x, _ = self.lstm(x)
+        T, b, h = x.shape
+        x = x.reshape((-1, h))
+
+        x = self.gather(x)
+        x = x.reshape(T, b, -1)
+
+        return x
