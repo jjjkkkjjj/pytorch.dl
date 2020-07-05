@@ -22,13 +22,11 @@ class ModelBase(nn.Module):
     def init_weights(self):
         raise NotImplementedError()
 
-class ObjectDetectionModelBase(ModelBase):
-
-    def __init__(self, class_labels, input_shape, batch_norm):
+class ImageRecognitionBase(ModelBase):
+    def __init__(self, class_labels, input_shape):
         """
         :param class_labels: int, class number
         :param input_shape: tuple, 3d and (height, width, channel)
-        :param batch_norm: bool, whether to add batch normalization layers
         """
         super().__init__()
 
@@ -36,7 +34,6 @@ class ObjectDetectionModelBase(ModelBase):
         assert len(input_shape) == 3, "input dimension must be 3"
         assert input_shape[0] == input_shape[1], "input must be square size"
         self._input_shape = input_shape
-        self._batch_norm = batch_norm
 
     @property
     def input_height(self):
@@ -54,19 +51,13 @@ class ObjectDetectionModelBase(ModelBase):
     @property
     def class_nums(self):
         return len(self._class_labels)
-    @property
-    def class_nums_with_background(self):
-        return self.class_nums + 1
-
-    @property
-    def batch_norm(self):
-        return self._batch_norm
 
 
-    @abc.abstractmethod
+    # @abc.abstractmethod
     def learn(self, x, targets):
         pass
-    @abc.abstractmethod
+
+    # @abc.abstractmethod
     def infer(self, image, visualize=False, **kwargs):
         """
         :param image:
@@ -78,6 +69,12 @@ class ObjectDetectionModelBase(ModelBase):
             visualized_images: list of ndarray, if visualize=True
         """
         pass
+
+class ObjectDetectionModelBase(ImageRecognitionBase):
+    @property
+    def class_nums_with_background(self):
+        return self.class_nums + 1
+
 
 
 

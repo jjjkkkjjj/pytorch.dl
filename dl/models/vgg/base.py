@@ -2,10 +2,11 @@ import torch
 from torch import nn
 from torchvision.models.utils import load_state_dict_from_url
 from ..layers import Flatten
+from ..base import ModelBase
 from collections import OrderedDict
 
 
-class VGGBase(nn.Module):
+class VGGBase(ModelBase):
     """
     :param
         load_model  : path, Bool or None

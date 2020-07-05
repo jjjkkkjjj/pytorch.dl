@@ -80,7 +80,7 @@ class SSDBase(ObjectDetectionModelBase):
         """
         self._train_config = _check_ins('train_config', train_config, SSDTrainConfig)
         self._val_config = _check_ins('val_config', val_config, SSDValConfig)
-        super().__init__(train_config.class_labels, train_config.input_shape, train_config.batch_norm)
+        super().__init__(train_config.class_labels, train_config.input_shape)
 
         self.codec = _check_ins('codec', codec, CodecBase, allow_none=True,
                                 default=Codec(norm_means=self.codec_means, norm_stds=self.codec_stds))
@@ -135,6 +135,10 @@ class SSDBase(ObjectDetectionModelBase):
     @property
     def class_nums(self):
         return self._train_config.class_nums
+
+    @property
+    def batch_norm(self):
+        return self._train_config.batch_norm
 
     @property
     def aspect_ratios(self):
