@@ -1,2 +1,2 @@
-from .xmlgenerator import annotationGenerator
+from .generotor import VOCGenerator, TextRecogCSVGenerator
 from .synthtext import *

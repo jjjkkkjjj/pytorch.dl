@@ -1,4 +1,4 @@
-from dl.data.text.datasets.synthtext import annotationGenerator
+from dl.data.text.datasets.synthtext import VOCGenerator
 
 import argparse
 
@@ -15,4 +15,4 @@ parser.add_argument('-e', '--encoding', help='encoding',
 args = parser.parse_args()
 
 if __name__ == '__main__':
-    annotationGenerator(args.path, imagedirname=args.image_dirname, skip_missing=args.skip_missing)
+    VOCGenerator(args.path, imagedirname=args.image_dirname, skip_missing=args.skip_missing)
