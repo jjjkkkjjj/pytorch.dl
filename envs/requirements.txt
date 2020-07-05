@@ -1,8 +1,9 @@
 ffmpeg==1.4
 matplotlib==3.2.1
-numpy==1.18.4
 opencv-python==4.2.0.34
 pillow==7.1.2
 pycurl==7.43.0.5
 pycocotools
+shapely
 scipy
+lxml
