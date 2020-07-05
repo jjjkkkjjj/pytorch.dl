@@ -1,20 +1,22 @@
 import cv2, os, logging
 import numpy as np
 from .coco_text import COCO_Text
-from ..base import TextDetectionDatasetBase
+from ..base import TextDetectionDatasetBase, Compose
 
 from ...._utils import DATA_ROOT, _check_ins
 
 COCOText_class_labels = ['text']
 COCOText_class_nums = len(COCOText_class_labels)
 
+COCO2014Text_ROOT = os.path.join(DATA_ROOT, 'coco', 'coco2014')
 class COCOTextSingleDatasetBase(TextDetectionDatasetBase):
-    def __init__(self, coco_dir, focus, datasetTypes, ignore=None, transform=None, target_transform=None, augmentation=None):
+    def __init__(self, coco_dir, focus, image_dir, datasetTypes, ignore=None, transform=None, target_transform=None, augmentation=None):
         """
         :param coco_dir: str, coco directory path above 'annotations' and 'images'
                 e.g.) coco_dir = '~~~~/coco2007/trainval'
         :param focus: str or str, directory name under images
                 e.g.) focus = 'train2014'
+        :param image_dir: str
         :param datasetType: list of str, train, val or test
         :param ignore: target_transforms.Ignore
         :param transform: instance of transforms
@@ -26,6 +28,7 @@ class COCOTextSingleDatasetBase(TextDetectionDatasetBase):
 
         self._coco_dir = coco_dir
         self._focus = focus
+        self._image_dir = image_dir
 
         self._class_labels = COCOText_class_labels
 
@@ -59,7 +62,7 @@ class COCOTextSingleDatasetBase(TextDetectionDatasetBase):
         :param filename: path containing .jpg
         :return: path of jpg
         """
-        return os.path.join(self._coco_dir, 'images', self._focus, filename)
+        return os.path.join(self._coco_dir, 'images', self._image_dir, filename)
 
     def __len__(self):
         return len(self._imageids)
@@ -155,47 +158,56 @@ class COCOTextSingleDatasetBase(TextDetectionDatasetBase):
 
         return np.array(bboxes, dtype=np.float32), np.array(linds, dtype=np.float32), flags, np.array(quads, dtype=np.float32), texts
 
+class COCOTextMultiDatasetBase(Compose):
+    def __init__(self, **kwargs):
+        """
+        :param datasets: tuple of Dataset
+        :param kwargs:
+            :param ignore:
+            :param transform:
+            :param target_transform:
+            :param augmentation:
+        """
+        super().__init__(datasets=(), **kwargs)
+
+        coco_dir = _check_ins('coco_dir', kwargs.pop('coco_dir'), (tuple, list, str))
+        focus = _check_ins('focus', kwargs.pop('focus'), (tuple, list, str))
+        datasetTypes = _check_ins('datasetTypes', kwargs.pop('datasetTypes'), (tuple, list))
+        image_dir = _check_ins('image_dir', kwargs.pop('image_dir'), str)
+
+        if isinstance(coco_dir, str) and isinstance(focus, str) and isinstance(datasetTypes, str):
+            datasets = [COCOTextSingleDatasetBase(coco_dir, focus, image_dir, datasetTypes, **kwargs)]
+            lens = [len(datasets[0])]
+
+        elif isinstance(coco_dir, (list, tuple)) and isinstance(focus, (list, tuple)) and isinstance(datasetTypes, (list, tuple)):
+            if not (len(coco_dir) == len(focus)):
+                raise ValueError('coco_dir, focus and datasetTypes must be same length, but got {} and {}'.format(len(coco_dir), len(focus)))
+
+            datasets = [COCOTextSingleDatasetBase(cdir, f, image_dir, datasetTypes, **kwargs) for cdir, f in zip(coco_dir, focus)]
+            lens = [len(d) for d in datasets]
+        else:
+            raise ValueError('Invalid coco_dir and focus combination')
+
+        self.datasets = datasets
+        self.lens = lens
+        self._class_labels = datasets[0].class_labels
+
 
 class COCO2014Text_Dataset(COCOTextSingleDatasetBase):
     def __init__(self, **kwargs):
-        super().__init__(DATA_ROOT + '/coco/coco2014/trainval', 'COCO_Text', ('train', 'val', 'test'), **kwargs)
+        super().__init__(DATA_ROOT + '/coco/coco2014/trainval', 'COCO_Text', 'train2014', ('train', 'val', 'test'), **kwargs)
 
-    def _jpgpath(self, filename):
-        """
-        :param filename: path containing .jpg
-        :return: path of jpg
-        """
-        return os.path.join(self._coco_dir, 'images', 'train2014', filename)
 
 class COCO2014Text_TrainDataset(COCOTextSingleDatasetBase):
     def __init__(self, **kwargs):
-        super().__init__(DATA_ROOT + '/coco/coco2014/trainval', 'COCO_Text', ('train',), **kwargs)
+        super().__init__(DATA_ROOT + '/coco/coco2014/trainval', 'COCO_Text', 'train2014', ('train',), **kwargs)
 
-    def _jpgpath(self, filename):
-        """
-        :param filename: path containing .jpg
-        :return: path of jpg
-        """
-        return os.path.join(self._coco_dir, 'images', 'train2014', filename)
 
 class COCO2014Text_ValDataset(COCOTextSingleDatasetBase):
     def __init__(self, **kwargs):
-        super().__init__(DATA_ROOT + '/coco/coco2014/trainval', 'COCO_Text', ('val',), **kwargs)
+        super().__init__(DATA_ROOT + '/coco/coco2014/trainval', 'COCO_Text', 'train2014', ('val',), **kwargs)
 
-    def _jpgpath(self, filename):
-        """
-        :param filename: path containing .jpg
-        :return: path of jpg
-        """
-        return os.path.join(self._coco_dir, 'images', 'train2014', filename)
 
 class COCO2014Text_TestDataset(COCOTextSingleDatasetBase):
     def __init__(self, **kwargs):
-        super().__init__(DATA_ROOT + '/coco/coco2014/trainval', 'COCO_Text', ('test',), **kwargs)
-
-    def _jpgpath(self, filename):
-        """
-        :param filename: path containing .jpg
-        :return: path of jpg
-        """
-        return os.path.join(self._coco_dir, 'images', 'train2014', filename)
+        super().__init__(DATA_ROOT + '/coco/coco2014/trainval', 'COCO_Text', 'train2014', ('test',), **kwargs)

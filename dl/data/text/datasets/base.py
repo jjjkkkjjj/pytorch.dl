@@ -1,4 +1,6 @@
 from ...object.datasets.base import ObjectDetectionDatasetBase as ObjectDetectionDatasetBase
+from ...object.datasets.base import Compose
+
 import torch
 import numpy as np
 

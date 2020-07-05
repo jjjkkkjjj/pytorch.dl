@@ -1,16 +1,18 @@
 from distutils.core import setup
 
+import os
+packages = ['dl']
+for root,dirs,_ in os.walk('dl'):
+    for d in dirs:
+        if d not in ['__pycache__']:
+            packages += [os.path.join(root,d).replace('/', '.')]
+
+
 setup(
     name='pytorch.dl',
     version='0.0.1',
     # too stupid code....
-    packages=['dl',
-              'dl.train',
-              'dl.models',
-              'dl.models.ssd', 'dl.models.ssd.core', 'dl.models.ssd.core.boxes',
-              'dl.models.vgg',
-              'dl.data', 'dl.data.object', 'dl.data.object.datasets', 'dl.data.object.augmentations',
-              'dl.data.text', 'dl.data.text.datasets'],
+    packages=packages,
     url='https://github.com/jjjkkkjjj/pytorch.dl',
     license='MIT',
     author='jjjkkkjjj',

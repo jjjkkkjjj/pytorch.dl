@@ -2,13 +2,14 @@ import cv2, os, glob
 import numpy as np
 from pathlib import Path
 from xml.etree import ElementTree as ET
-from ..base import TextDetectionDatasetBase
+from ..base import TextDetectionDatasetBase, Compose
 
 from ...._utils import DATA_ROOT, _check_ins, _get_xml_et_value
 
 SynthText_class_labels = ['text']
 SynthText_class_nums = len(SynthText_class_labels)
 
+SynthText_ROOT = os.path.join(DATA_ROOT, 'text', 'SynthText')
 class SynthTextSingleDatasetBase(TextDetectionDatasetBase):
     def __init__(self, synthtext_dir, ignore=None, transform=None, target_transform=None, augmentation=None):
         """
@@ -93,6 +94,34 @@ class SynthTextSingleDatasetBase(TextDetectionDatasetBase):
             flags.append({'difficult': _get_xml_et_value(obj, 'difficult', int) == 1})
 
         return np.array(bboxes, dtype=np.float32), np.array(linds, dtype=np.float32), flags, np.array(quads, dtype=np.float32), texts
+
+class SynthTextMultiDatasetBase(Compose):
+    def __init__(self, **kwargs):
+        """
+        :param datasets: tuple of Dataset
+        :param kwargs:
+            :param ignore:
+            :param transform:
+            :param target_transform:
+            :param augmentation:
+        """
+        super().__init__(datasets=(), **kwargs)
+
+        synthtext_dir = _check_ins('synthtext_dir', kwargs.pop('synthtext_dir'), (tuple, list, str))
+
+        if isinstance(synthtext_dir, str):
+            datasets = [SynthTextSingleDatasetBase(synthtext_dir, **kwargs)]
+            lens = [len(datasets[0])]
+
+        elif isinstance(synthtext_dir, (list, tuple)):
+            datasets = [SynthTextSingleDatasetBase(sdir, **kwargs) for sdir in synthtext_dir]
+            lens = [len(d) for d in datasets]
+        else:
+            assert False
+
+        self.datasets = datasets
+        self.lens = lens
+        self._class_labels = datasets[0].class_labels
 
 class SynthTextDataset(SynthTextSingleDatasetBase):
     def __init__(self, **kwargs):

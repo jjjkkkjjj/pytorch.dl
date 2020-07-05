@@ -1,13 +1,14 @@
 import cv2, os, glob
 import numpy as np
 from xml.etree import ElementTree as ET
-from .base import TextDetectionDatasetBase
+from .base import TextDetectionDatasetBase, Compose
 
 from ..._utils import DATA_ROOT, _check_ins, _get_xml_et_value
 
 SynthText_class_labels = ['text']
 SynthText_class_nums = len(SynthText_class_labels)
 
+ICDARText_ROOT = os.path.join(DATA_ROOT, 'text', 'ICDAR2015')
 class ICDARTextSingleDatasetBase(TextDetectionDatasetBase):
     def __init__(self, icdar_dir, image_ext='.jpg', ignore=None, transform=None, target_transform=None, augmentation=None):
         """
@@ -123,6 +124,34 @@ class ICDARTextSingleDatasetBase(TextDetectionDatasetBase):
                 flags.append({'difficult': element[-1] == '###'})
 
         return np.array(bboxes, dtype=np.float32), np.array(linds, dtype=np.float32), flags, np.array(quads, dtype=np.float32), texts
+
+class ICDARTextMultiDatasetBase(Compose):
+    def __init__(self, **kwargs):
+        """
+        :param datasets: tuple of Dataset
+        :param kwargs:
+            :param ignore:
+            :param transform:
+            :param target_transform:
+            :param augmentation:
+        """
+        super().__init__(datasets=(), **kwargs)
+
+        icdar_dir = _check_ins('icdar_dir', kwargs.pop('icdar_dir'), (tuple, list, str))
+
+        if isinstance(icdar_dir, str):
+            datasets = [ICDARTextSingleDatasetBase(icdar_dir, image_ext=None, **kwargs)]
+            lens = [len(datasets[0])]
+
+        elif isinstance(icdar_dir, (list, tuple)):
+            datasets = [ICDARTextSingleDatasetBase(idir, image_ext=None, **kwargs) for idir in icdar_dir]
+            lens = [len(d) for d in datasets]
+        else:
+            assert False
+
+        self.datasets = datasets
+        self.lens = lens
+        self._class_labels = datasets[0].class_labels
 
 class ICDAR2015TextDataset(ICDARTextSingleDatasetBase):
     def __init__(self, **kwargs):
