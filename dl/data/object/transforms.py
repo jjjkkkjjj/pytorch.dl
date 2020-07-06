@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import cv2
 import logging
+from .._utils import _check_ins
 
 class Compose(object):
     def __init__(self, transforms):
@@ -50,6 +51,23 @@ class Resize(object):
 
     def __call__(self, img, *args):
         return (cv2.resize(img, self._size), *args)
+
+
+class Grayscale(object):
+    def __init__(self, last_dims=None):
+        """
+        :param last_dims: int or None, if last_dims is None, return image with (h, w), 
+                          otherwise, with (h, w, last_dims)
+        """
+        self._last_dims = _check_ins('last_dims', last_dims, int, allow_none=True)
+        
+    def __call__(self, img, *args):
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        if self._last_dims:
+            img = np.expand_dims(img, -1)
+            img = np.ascontiguousarray(np.broadcast_to(img, self._last_dims))
+        
+        return (img, *args)
 
 
 class Normalize(object):

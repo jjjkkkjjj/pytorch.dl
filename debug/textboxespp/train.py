@@ -30,8 +30,8 @@ if __name__ == '__main__':
     )
 
     #train_dataset = datasets.COCO2014Text_Dataset(ignore=target_transforms.Ignore(illegible=True), transform=transform, target_transform=target_transform, augmentation=None)
-    #train_dataset = datasets.SynthTextDataset(ignore=None, transform=transform, target_transform=target_transform, augmentation=augmentation)
-    #train_dataset = datasets.SynthTextDataset(ignore=None, transform=transform, target_transform=target_transform, augmentation=augmentation)
+    #train_dataset = datasets.SynthTextDetectionDataset(ignore=None, transform=transform, target_transform=target_transform, augmentation=augmentation)
+    #train_dataset = datasets.SynthTextDetectionDataset(ignore=None, transform=transform, target_transform=target_transform, augmentation=augmentation)
     #train_dataset = datasets.ICDAR2015TextDataset(ignore=None, transform=transform, target_transform=target_transform, augmentation=augmentation)
     #train_dataset = datasets.ICDARFocusedSceneTextDataset(ignore=ignore, transform=transform, target_transform=target_transform, augmentation=augmentation)
     #train_dataset = datasets.ICDARBornDigitalTextDataset(ignore=ignore, transform=transform, target_transform=target_transform, augmentation=augmentation)

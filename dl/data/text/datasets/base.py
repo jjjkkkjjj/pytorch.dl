@@ -1,8 +1,18 @@
-from ...object.datasets.base import ObjectDetectionDatasetBase as ObjectDetectionDatasetBase
+from ...object.datasets.base import ObjectDetectionDatasetBase, ObjectRecognitionDatasetBase
 from ...object.datasets.base import Compose
 
-import torch
+import torch, string
 import numpy as np
+
+##### Recognition #####
+ALPHABET_LABELS = list(string.ascii_lowercase)
+NUMBER_LABELS = [i for i in range(10)]
+
+class TextRecognitionDatasetBase(ObjectRecognitionDatasetBase):
+    pass
+
+
+##### Detection #####
 
 class TextDetectionDatasetBase(ObjectDetectionDatasetBase):
     def __getitem__(self, index):
@@ -45,3 +55,4 @@ class TextDetectionDatasetBase(ObjectDetectionDatasetBase):
         args[0] = quads
 
         return super().apply_transform(img, bboxes, linds, flags, *tuple(args))
+

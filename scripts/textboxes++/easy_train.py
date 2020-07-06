@@ -161,8 +161,8 @@ else:
     ignore = None
 
 if args.dataset_type == 'SynthText':
-    train_dataset = datasets.SynthTextMultiDatasetBase(synthtext_dir=rootdir, ignore=ignore,
-                                                       transform=transform, target_transform=target_transform, augmentation=augmentation)
+    train_dataset = datasets.SynthTextDetectionMultiDatasetBase(synthtext_dir=rootdir, ignore=ignore,
+                                                                transform=transform, target_transform=target_transform, augmentation=augmentation)
 elif args.dataset_type == 'COCO':
     train_dataset = datasets.COCOTextMultiDatasetBase(coco_dir=rootdir, focus=focus, image_dir=image_dir, datasetTypes=('train', 'val',), ignore=ignore,
                                                       transform=transform, target_transform=target_transform, augmentation=augmentation)

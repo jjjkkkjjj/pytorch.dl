@@ -159,8 +159,8 @@ def TextRecogCSVGenerator(basedir, imagedirname='SynthText', skip_missing=False,
 
     annodir = os.path.join(basedir, 'Annotations')
     with open(os.path.join(annodir, 'gt.csv'), 'w') as f:
-        wr = csv.writer(f, dialect='excel')
-        wr.writerow(lines)
+        writer = csv.writer(f)
+        writer.writerows(lines)
 
 
 def _gtmatRecognizer(generator, basedir, imagedirname='SynthText', **kwargs):
