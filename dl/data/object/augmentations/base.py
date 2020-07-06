@@ -8,10 +8,10 @@ class Compose(object):
     def __init__(self, augmentaions):
         self.augmentaions = augmentaions
 
-    def __call__(self, img, bboxes, labels, flags, *args):
+    def __call__(self, img, *targets):
         for t in self.augmentaions:
-            img, bboxes, labels, flags, args = t(img, bboxes, labels, flags, *args)
-        return img, bboxes, labels, flags, args
+            img, targets = t(img, *targets)
+        return img, targets
 
     def __repr__(self):
         format_string = self.__class__.__name__ + '('

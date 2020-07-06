@@ -28,9 +28,11 @@ class TextDetectionDatasetBase(ObjectDetectionDatasetBase):
                 texts: list of str, if it's illegal, str = ''
         """
         img = self._get_image(index)
-        bboxes, linds, flags, quads, texts = self._get_target(index)
+        targets = self._get_target(index)
 
-        img, bboxes, linds, flags, (quads, texts) = self.apply_transform(img, bboxes, linds, flags, quads, texts)
+        img, targets = self.apply_transform(img, *targets)
+
+        bboxes, linds, flags, quads, texts = targets[:]
 
         # concatenate bboxes and linds
         if isinstance(bboxes, torch.Tensor) and isinstance(linds, torch.Tensor):
@@ -45,14 +47,13 @@ class TextDetectionDatasetBase(ObjectDetectionDatasetBase):
         return img, targets, texts
         #return img, targets
 
-    def apply_transform(self, img, bboxes, linds, flags, *args):
+    def apply_transform(self, img, *targets):
+        bboxes, linds, flags, quads, texts = targets[:]
+
         height, width, channel = img.shape
 
-        quads = args[0]
         quads[:, 0::2] /= float(width)
         quads[:, 1::2] /= float(height)
-        args = list(args)
-        args[0] = quads
 
-        return super().apply_transform(img, bboxes, linds, flags, *tuple(args))
+        return super().apply_transform(img, bboxes, linds, flags, quads, texts)
 

@@ -23,7 +23,7 @@ class RandomBrightness(object):
             img += delta
             img = np.clip(img, a_min=0, a_max=255)
 
-        return img, bboxes, labels, flags, args
+        return img, (bboxes, labels, flags, *args)
 
 class RandomContrast(object):
     def __init__(self, fmin=0.5, fmax=1.5, p=0.5):
@@ -41,7 +41,7 @@ class RandomContrast(object):
             img *= factor
             img = np.clip(img, a_min=0, a_max=255)
 
-        return img, bboxes, labels, flags, args
+        return img, (bboxes, labels, flags, *args)
 
 class RandomHue(object):
     def __init__(self, dmin=-18, dmax=18, p=0.5):
@@ -66,7 +66,7 @@ class RandomHue(object):
             under_mask = img[:, :, 0] < 0
             img[under_mask, 0] += 180
 
-        return img, bboxes, labels, flags, args
+        return img, (bboxes, labels, flags, *args)
 
 class RandomSaturation(object):
     def __init__(self, fmin=0.5, fmax=1.5, p=0.5):
@@ -84,7 +84,7 @@ class RandomSaturation(object):
             img[:, :, 1] *= factor
             img = np.clip(img, a_min=0, a_max=255)
 
-        return img, bboxes, labels, flags, args
+        return img, (bboxes, labels, flags, *args)
 
 class RandomLightingNoise(object):
     def __init__(self, perms=None, p=0.5):
@@ -99,16 +99,17 @@ class RandomLightingNoise(object):
             # get transposed indices randomly
             index = random.randint(0, len(self.permutations))
             t = SwapChannels(self.permutations[index])
-            img, bboxes, labels, flags, args = t(img, bboxes, labels, flags, *args)
+            img, targets = t(img, bboxes, labels, flags, *args)
+            bboxes, labels, flags = targets[:3]
 
-        return img, bboxes, labels, flags, args
+        return img, (bboxes, labels, flags, *args)
 
 class SwapChannels(object):
     def __init__(self, trans_indices):
         self.trans_indices = trans_indices
 
     def __call__(self, img, bboxes, labels, flags, *args):
-        return img[:, :, self.trans_indices], bboxes, labels, flags, args
+        return img[:, :, self.trans_indices], (bboxes, labels, flags, *args)
 
 
 class ConvertImgOrder(object):
@@ -122,7 +123,7 @@ class ConvertImgOrder(object):
         except:
             raise ValueError('Invalid src:{} or dst:{}'.format(self.src_order, self.dst_order))
 
-        return img, bboxes, labels, flags, args
+        return img, (bboxes, labels, flags, *args)
 
 
 class PhotometricDistortions(Compose):
@@ -141,17 +142,17 @@ class PhotometricDistortions(Compose):
         ]
         super().__init__(pmdists)
 
-    def __call__(self, img, bboxes, labels, flags, *args):
-        img, bboxes, labels, flags, args = self.brigtness(img, bboxes, labels, flags, *args)
+    def __call__(self, img, *targets):
+        img, targets = self.brigtness(img, *targets)
 
         if decision(self.p): # random contrast first
-            img, bboxes, labels, flags, args = self.cotrast(img, bboxes, labels, flags, *args)
-            img, bboxes, labels, flags, args = super().__call__(img, bboxes, labels, flags, *args)
+            img, targets = self.cotrast(img, *targets)
+            img, targets = super().__call__(img, *targets)
 
         else: # random contrast last
-            img, bboxes, labels, flags, args = super().__call__(img, bboxes, labels, flags, *args)
-            img, bboxes, labels, flags, args = self.cotrast(img, bboxes, labels, flags, *args)
+            img, targets = super().__call__(img, *targets)
+            img, targets = self.cotrast(img, *targets)
 
-        img, bboxes, labels, flags, args = self.lightingnoise(img, bboxes, labels, flags, *args)
+        img, targets = self.lightingnoise(img, *targets)
 
-        return img, bboxes, labels, flags, args
+        return img, targets

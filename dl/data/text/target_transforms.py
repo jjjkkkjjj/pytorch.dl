@@ -1,10 +1,10 @@
 import logging
-from ..object.target_transforms import Ignore as _Ignore
 from ..._utils import _check_ins
 
 from ..object.target_transforms import *
+from ..object.target_transforms import _IgnoreBase
 
-class Ignore(_Ignore):
+class Ignore(_IgnoreBase):
     supported_key = ['illegible', 'difficult', 'strange']
 
     def __init__(self, **kwargs):
@@ -25,15 +25,12 @@ class Ignore(_Ignore):
             else:
                 logging.warning('Unsupported arguments: {}'.format(key))
 
-    def __call__(self, bboxes, labels, flags, *args):
+    def __call__(self, bboxes, labels, flags, quads, texts):
         ret_bboxes = []
         ret_labels = []
         ret_flags = []
         ret_quads = []
         ret_texts = []
-
-        quads = args[0]
-        texts = args[1]
 
         for bbox, label, flag, quad, text in zip(bboxes, labels, flags, quads, texts):
             flag_keys = list(flag.keys())
@@ -66,10 +63,10 @@ class Ignore(_Ignore):
         ret_labels = np.array(ret_labels, dtype=np.float32)
         ret_quads = np.array(ret_quads, dtype=np.float32)
 
-        return ret_bboxes, ret_labels, ret_flags, (ret_quads, ret_texts, *args[2:])
+        return ret_bboxes, ret_labels, ret_flags, ret_quads, ret_texts
 
 class ToTensor(object):
-    def __call__(self, bboxes, labels, flags, *args):
+    def __call__(self, bboxes, labels, flags, quads, texts):
         """
         :param bboxes:
         :param labels:
@@ -79,13 +76,13 @@ class ToTensor(object):
             texts
         :return:
         """
-        return torch.from_numpy(bboxes), torch.from_numpy(labels), flags, (torch.from_numpy(args[0]), *args[1:])
+        return torch.from_numpy(bboxes), torch.from_numpy(labels), flags, torch.from_numpy(quads), texts
 
 
 class ToQuadrilateral(object):
-    def __call__(self, bboxes, labels, flags, *args):
+    def __call__(self, bboxes, labels, flags, quads, texts):
         # Note that bboxes must be [cx, cy, w, h]
-        assert args[0].shape[1] == 8, '4th arguments must be quadrilateral points'
+        assert quads.shape[1] == 8, '4th arguments must be quadrilateral points'
 
         # b=(xmin,ymin), (xmax,ymin), (xmax,ymax), (xmin,ymax)
         # b's shape = (*, 4, 2=(top left, top right, bottom right, bottom left)=(x,y))
@@ -97,7 +94,7 @@ class ToQuadrilateral(object):
         b[:, 3, :] = bboxes[:, np.array((0, 3))]
 
         # convert shape to (*, 4, 2)
-        quads = args[0].reshape((-1, 4, 2))
+        quads = quads.reshape((-1, 4, 2))
 
         """
         dist formula is below;
@@ -118,4 +115,4 @@ class ToQuadrilateral(object):
         for b in range(box_num):
             quads[b] = quads[b, np.roll(trans, inds[b])]
 
-        return bboxes, labels, flags, (quads.reshape((-1, 8)), *args[1:])
+        return bboxes, labels, flags, quads.reshape((-1, 8)), texts

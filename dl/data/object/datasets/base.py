@@ -4,7 +4,7 @@ import numpy as np
 import abc
 
 from ..._utils import _check_ins, _contain_ignore
-from ..target_transforms import Ignore
+from ..target_transforms import _IgnoreBase
 
 """
 ref > https://pytorch.org/tutorials/beginner/data_loading_tutorial.html
@@ -75,44 +75,38 @@ class ObjectRecognitionDatasetBase(_DatasetBase):
         """
         img = self._get_image(index)
         targets = self._get_target(index)
-        if len(targets) >= 1:
-            args = targets[1:]
-        else:
-            raise ValueError(
-                'ValueError: not enough values to unpack (expected more than 1, got {})'.format(len(targets)))
 
-        img, targets, args = self.apply_transform(img, targets, *args)
+        img, targets = self.apply_transform(img, *targets)
 
         return img, targets
 
-    def apply_transform(self, img, targets, *args):
+    def apply_transform(self, img, *targets):
         """
         IMPORTATANT: apply transform function in order with ignore, augmentation, transform and target_transform
         :param img:
         :param targets:
-        :param args:
         :return:
             Transformed img, targets, args
         """
 
         if self.augmentation:
-            img, targets, args = self.augmentation(img, targets, *args)
+            img, targets = self.augmentation(img, *targets)
 
         if self.transform:
-            img, args = self.transform(img, *args)
+            img = self.transform(img)
 
         if self.target_transform:
-            img, targets, args = self.target_transform(img, targets, *args)
+            targets = self.target_transform(*targets)
 
-        return img, targets, args
+        return img, targets
 
     @abc.abstractmethod
     def __len__(self):
         pass
 
 ##### Detection #####
-# TODO: gather ObjectRecognitionDatasetBase
-class ObjectDetectionDatasetBase(_DatasetBase):
+
+class ObjectDetectionDatasetBase(ObjectRecognitionDatasetBase):
     def __init__(self, ignore=None, transform=None, target_transform=None, augmentation=None):
         """
         :param ignore: target_transforms.Ignore
@@ -120,11 +114,8 @@ class ObjectDetectionDatasetBase(_DatasetBase):
         :param target_transform: instance of target_transforms
         :param augmentation:  instance of augmentations
         """
-        # ignore, target_transform = _separate_ignore(target_transform)
-        self.ignore = _check_ins('ignore', ignore, Ignore, allow_none=True)
-        self.transform = transform
-        self.target_transform = _contain_ignore(target_transform)
-        self.augmentation = augmentation
+        super().__init__(transform, target_transform, augmentation)
+        self.ignore = _check_ins('ignore', ignore, _IgnoreBase, allow_none=True)
 
     @property
     @abc.abstractmethod
@@ -170,8 +161,8 @@ class ObjectDetectionDatasetBase(_DatasetBase):
             args = targets[3:]
         else:
             raise ValueError('ValueError: not enough values to unpack (expected more than 3, got {})'.format(len(targets)))
-        img, bboxes, linds, flags, args = self.apply_transform(img, bboxes, linds, flags, *args)
-
+        img, targets = self.apply_transform(img, bboxes, linds, flags, *args)
+        bboxes, linds, flags = targets[:3]
         # concatenate bboxes and linds
         if isinstance(bboxes, torch.Tensor) and isinstance(linds, torch.Tensor):
             if linds.ndim == 1:
@@ -184,7 +175,7 @@ class ObjectDetectionDatasetBase(_DatasetBase):
 
         return img, targets
 
-    def apply_transform(self, img, bboxes, linds, flags, *args):
+    def apply_transform(self, img, *targets):
         """
         IMPORTATANT: apply transform function in order with ignore, augmentation, transform and target_transform
         :param img:
@@ -194,6 +185,7 @@ class ObjectDetectionDatasetBase(_DatasetBase):
         :return:
             Transformed img, bboxes, linds, flags
         """
+        bboxes = targets[0]
         # To Percent mode
         height, width, channel = img.shape
         # bbox = [xmin, ymin, xmax, ymax]
@@ -202,18 +194,9 @@ class ObjectDetectionDatasetBase(_DatasetBase):
         bboxes[:, 1::2] /= float(height)
 
         if self.ignore:
-            bboxes, linds, flags, args = self.ignore(bboxes, linds, flags, *args)
+            targets = self.ignore(bboxes, *targets[1:])
 
-        if self.augmentation:
-            img, bboxes, linds, flags, args = self.augmentation(img, bboxes, linds, flags, *args)
-
-        if self.transform:
-            img, bboxes, linds, flag, args = self.transform(img, bboxes, linds, flags, *args)
-
-        if self.target_transform:
-            bboxes, linds, flags, args = self.target_transform(bboxes, linds, flags, *args)
-
-        return img, bboxes, linds, flags, args
+        return super().apply_transform(img, *targets)
 
     @abc.abstractmethod
     def __len__(self):

@@ -160,6 +160,11 @@ if args.ignore:
     ignore = target_transforms.Ignore(**kwargs)
 else:
     ignore = None
+    if args.dataset_type == 'VOC':
+        logging.info('If you use original VOC Dataset without ignoring difficult, this will be caused not to converge loss (become nan)')
+    else:
+        logging.info(
+            'If you use original COCO Dataset without ignoring, this will be caused not to converge loss (become nan)')
 
 if args.dataset_type == 'VOC':
     train_dataset = datasets.VOCMultiDatasetBase(voc_dir=rootdir, focus=focus, ignore=ignore,

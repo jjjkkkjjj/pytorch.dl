@@ -8,12 +8,10 @@ class Compose(object):
     def __init__(self, transforms):
         self.transforms = transforms
 
-    def __call__(self, img, bboxes, labels, flags, *args):
+    def __call__(self, img):
         for t in self.transforms:
-            transformed = t(img, bboxes, labels, flags, *args)
-            img, bboxes, labels, flags = transformed[:4]
-            args = transformed[4:]
-        return img, bboxes, labels, flags, args
+            img = t(img)
+        return img
 
     def __repr__(self):
         format_string = self.__class__.__name__ + '('
@@ -36,11 +34,11 @@ class ToTensor(object):
     """
     Note that convert ndarray to tensor and [0-255] to [0-1]
     """
-    def __call__(self, img, *args):
+    def __call__(self, img):
         # convert ndarray into Tensor
         # transpose img's tensor (h, w, c) to pytorch's format (c, h, w). (num, c, h, w)
         img = np.transpose(img, (2, 0, 1))
-        return (torch.from_numpy(img).float() / 255., *args)
+        return torch.from_numpy(img).float() / 255.
 
 class Resize(object):
     def __init__(self, size):
@@ -49,8 +47,8 @@ class Resize(object):
         """
         self._size = size
 
-    def __call__(self, img, *args):
-        return (cv2.resize(img, self._size), *args)
+    def __call__(self, img):
+        return cv2.resize(img, self._size)
 
 
 class Grayscale(object):
@@ -61,13 +59,13 @@ class Grayscale(object):
         """
         self._last_dims = _check_ins('last_dims', last_dims, int, allow_none=True)
         
-    def __call__(self, img, *args):
+    def __call__(self, img):
         img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
         if self._last_dims:
             img = np.expand_dims(img, -1)
             img = np.ascontiguousarray(np.broadcast_to(img, self._last_dims))
-        
-        return (img, *args)
+
+        return img
 
 
 class Normalize(object):
@@ -81,6 +79,6 @@ class Normalize(object):
 
     def __call__(self, img, *args):
         if isinstance(img, torch.Tensor):
-            return ((img.float() - torch.from_numpy(self.means)) / torch.from_numpy(self.stds), *args)
+            return (img.float() - torch.from_numpy(self.means)) / torch.from_numpy(self.stds)
         else:
-            return ((img.astype(np.float32) - self.means) / self.stds, *args)
+            return (img.astype(np.float32) - self.means) / self.stds

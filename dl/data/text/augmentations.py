@@ -13,7 +13,7 @@ class _SampledPatchOp(object):
 
 class EntireSample(_SampledPatchOp):
     def __call__(self, img, bboxes, labels, flags, *args):
-        return img, bboxes, labels, flags, args
+        return img, (bboxes, labels, flags, args)
 
 
 class RandomThresSampledPatch(_SampledPatchOp):
@@ -122,7 +122,7 @@ class RandomThresSampledPatch(_SampledPatchOp):
         ret_quads[:, 0::2] /= float(patch_w)
         ret_quads[:, 1::2] /= float(patch_h)
 
-        return ret_img, ret_bboxes, ret_labels, flags, (ret_quads, ret_texts.tolist())
+        return ret_img, (ret_bboxes, ret_labels, flags, ret_quads, ret_texts.tolist())
 
 
 class RandomIoUSampledPatch(RandomThresSampledPatch):

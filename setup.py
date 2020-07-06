@@ -13,7 +13,7 @@ with open('envs/requirements.txt') as f:
 
 setup(
     name='pytorch.dl',
-    version='0.0.1',
+    version='0.0.2',
     packages=packages,
     install_requires=required,
     url='https://github.com/jjjkkkjjj/pytorch.dl',

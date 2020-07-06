@@ -110,7 +110,11 @@ class TrainLoggerBase(object):
 
         train_iterator = iter(train_loader)
         for now_iteration in range(start_iteration, max_iterations):
-            item = next(train_iterator)
+            try:
+                item = next(train_iterator)
+            except StopIteration:
+                train_iterator = iter(train_loader)
+                item = next(train_iterator)
 
             iter_starttime = time.time()
 
