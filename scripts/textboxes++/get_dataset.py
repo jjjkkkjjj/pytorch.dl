@@ -1,5 +1,5 @@
-from dl.data.text.downloader import *
-from dl.data.text.downloader import choices
+from dl.data.txtdetn.downloader import *
+from dl.data.txtdetn.downloader import choices
 
 import argparse
 

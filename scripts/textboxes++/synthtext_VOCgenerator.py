@@ -1,4 +1,4 @@
-from dl.data.text.datasets.synthtext import VOCGenerator
+from dl.data.txtdetn.datasets.synthtext import VOCGenerator
 
 import argparse
 

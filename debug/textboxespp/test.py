@@ -1,4 +1,4 @@
-from dl.data.text import datasets, target_transforms, transforms, augmentations
+from dl.data.txtdetn import datasets, target_transforms, transforms, augmentations
 from dl.models import TextBoxesPP
 from dl.models.ssd.core import toVisualizeInfQuadsRGBimg
 

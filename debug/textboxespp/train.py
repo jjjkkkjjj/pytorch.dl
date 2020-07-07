@@ -1,5 +1,5 @@
-from dl.data.text import datasets, target_transforms, transforms
-from dl.data.text.utils import batch_ind_fn_droptexts
+from dl.data.txtdetn import datasets, target_transforms, transforms
+from dl.data.txtdetn.utils import batch_ind_fn_droptexts
 
 from dl.models import TextBoxesPP
 from dl.loss.textboxespp import TextBoxLoss

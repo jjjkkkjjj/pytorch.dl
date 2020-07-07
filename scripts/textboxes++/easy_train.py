@@ -1,7 +1,7 @@
 import argparse
 import os
 
-from dl.data.text.datasets import SynthText_ROOT, COCO2014Text_ROOT, ICDARText_ROOT
+from dl.data.txtdetn.datasets import SynthText_ROOT, COCO2014Text_ROOT, ICDARText_ROOT
 
 synthtext_rootdir_default = [SynthText_ROOT]
 coco_rootdir_default = [os.path.join(COCO2014Text_ROOT, 'trainval')]
@@ -104,7 +104,7 @@ from torch.utils.data import DataLoader
 from torch.optim.adam import Adam
 from torch.optim.sgd import SGD
 
-from dl.data.text import datasets, utils, target_transforms, transforms, augmentations
+from dl.data.txtdetn import datasets, utils, target_transforms, transforms, augmentations
 from dl.models.ssd import *
 from dl.loss.textboxespp import TextBoxLoss, ConfidenceLoss
 from dl.optim.scheduler import IterMultiStepLR
