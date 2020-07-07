@@ -109,7 +109,7 @@ class ObjectRecognitionDatasetBase(_DatasetBase):
 class ObjectDetectionDatasetBase(ObjectRecognitionDatasetBase):
     def __init__(self, ignore=None, transform=None, target_transform=None, augmentation=None):
         """
-        :param ignore: target_transforms.ObjectDetectionIgnore
+        :param ignore: target_transforms.Ignore
         :param transform: instance of transforms
         :param target_transform: instance of target_transforms
         :param augmentation:  instance of augmentations

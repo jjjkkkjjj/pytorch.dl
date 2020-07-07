@@ -1,5 +1,5 @@
-from ...object.datasets.base import ObjectDetectionDatasetBase, ObjectRecognitionDatasetBase
-from ...object.datasets.base import Compose
+from ...objdetn.datasets.base import ObjectDetectionDatasetBase, ObjectRecognitionDatasetBase
+from ...objdetn.datasets.base import Compose
 
 import torch, string
 import numpy as np

@@ -1,4 +1,4 @@
-from dl.data.object import datasets, utils, target_transforms, transforms
+from dl.data.objdetn import datasets, utils, target_transforms, transforms
 
 from dl.models.ssd.ssd300 import SSD300
 from dl.models.ssd.core import toVisualizeRGBImg
@@ -15,7 +15,7 @@ if __name__ == '__main__':
     )
     target_transform = target_transforms.Compose(
         [target_transforms.Corners2Centroids(),
-         target_transforms.ObjectDetectionOneHot(class_nums=datasets.VOC_class_nums, add_background=True),
+         target_transforms.OneHot(class_nums=datasets.VOC_class_nums, add_background=True),
          target_transforms.ToTensor()]
     )
     test_dataset = datasets.VOC2007_TestDataset(transform=transform, target_transform=target_transform, augmentation=augmentation)

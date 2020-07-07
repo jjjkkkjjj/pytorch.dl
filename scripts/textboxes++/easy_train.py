@@ -150,7 +150,7 @@ transform = transforms.Compose(
 )
 target_transform = target_transforms.Compose(
     [target_transforms.Corners2Centroids(),
-     target_transforms.ObjectDetectionOneHot(class_nums=len(class_labels), add_background=True),
+     target_transforms.OneHot(class_nums=len(class_labels), add_background=True),
      target_transforms.ToTensor()]
 )
 

@@ -1,8 +1,8 @@
 import argparse
 import os
 
-from dl.data.object.datasets import VOC2007_ROOT, VOC_class_labels
-from dl.data.object.datasets import COCO2014_ROOT, COCO_class_labels
+from dl.data.objdetn.datasets import VOC2007_ROOT, VOC_class_labels
+from dl.data.objdetn.datasets import COCO2014_ROOT, COCO_class_labels
 
 voc_rootdir_default = [VOC2007_ROOT]
 coco_rootdir_default = [os.path.join(COCO2014_ROOT, 'trainval')]
@@ -100,7 +100,7 @@ from torch.utils.data import DataLoader
 from torch.optim.adam import Adam
 from torch.optim.sgd import SGD
 
-from dl.data.object import datasets, utils, target_transforms, transforms, augmentations
+from dl.data.objdetn import datasets, utils, target_transforms, transforms, augmentations
 from dl.models.ssd import *
 from dl.loss.ssd import SSDLoss
 from dl.optim.scheduler import IterMultiStepLR
@@ -151,13 +151,13 @@ transform = transforms.Compose(
 )
 target_transform = target_transforms.Compose(
     [target_transforms.Corners2Centroids(),
-     target_transforms.ObjectDetectionOneHot(class_nums=len(class_labels), add_background=True),
+     target_transforms.OneHot(class_nums=len(class_labels), add_background=True),
      target_transforms.ToTensor()]
 )
 
 if args.ignore:
     kwargs = {key: True for key in args.ignore}
-    ignore = target_transforms.ObjectDetectionIgnore(**kwargs)
+    ignore = target_transforms.Ignore(**kwargs)
 else:
     ignore = None
     if args.dataset_type == 'VOC':

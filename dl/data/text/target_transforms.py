@@ -1,8 +1,8 @@
 import logging
 from ..._utils import _check_ins
 
-from ..object.target_transforms import *
-from ..object.target_transforms import _IgnoreBase
+from ..objdetn.target_transforms import *
+from ..objdetn.target_transforms import _IgnoreBase
 
 class Text2Number(object):
     def __init__(self):

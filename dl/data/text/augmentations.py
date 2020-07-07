@@ -4,7 +4,7 @@ import logging
 
 from .._utils import _check_ins
 from ...models.ssd.core.boxes.utils import iou_numpy, coverage_numpy, corners2centroids_numpy
-from ..object.augmentations import Compose
+from ..objdetn.augmentations import Compose
 
 class _SampledPatchOp(object):
     class UnSatisfy(Exception):

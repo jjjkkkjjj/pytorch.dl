@@ -45,12 +45,12 @@ def _one_hot_encode(indices, class_num):
 # not needed
 def _separate_ignore(target_transform):
     """
-    Separate ObjectDetectionIgnore by target_transform
+    Separate Ignore by target_transform
     :param target_transform:
     :return: ignore, target_transform
     """
     if target_transform:
-        from .object.target_transforms import _IgnoreBase, Compose
+        from .objdetn.target_transforms import _IgnoreBase, Compose
         if isinstance(target_transform, _IgnoreBase):
             return target_transform, None
 
@@ -73,7 +73,7 @@ def _separate_ignore(target_transform):
 # not needed
 def _contain_ignore(target_transform):
     if target_transform:
-        from .object.target_transforms import _IgnoreBase, Compose
+        from .objdetn.target_transforms import _IgnoreBase, Compose
         if isinstance(target_transform, _IgnoreBase):
             raise ValueError('target_transforms.*Ignore must be passed to \'ignore\' argument')
 

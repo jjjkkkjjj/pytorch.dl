@@ -19,7 +19,7 @@ class VOCSingleDatasetBase(ObjectDetectionDatasetBase):
         :param voc_dir: str, voc directory path above 'Annotations', 'ImageSets' and 'JPEGImages'
                 e.g.) voc_dir = '~~~~/trainval/VOCdevkit/voc2007'
         :param focus: str, image set name. Assign txt file name under 'ImageSets' directory
-        :param ignore: target_transforms.ObjectDetectionIgnore
+        :param ignore: target_transforms.Ignore
         :param transform: instance of transforms
         :param target_transform: instance of target_transforms
         :param augmentation:  instance of augmentations

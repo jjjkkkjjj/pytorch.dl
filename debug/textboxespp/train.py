@@ -25,7 +25,7 @@ if __name__ == '__main__':
     target_transform = target_transforms.Compose(
         [target_transforms.Corners2Centroids(),
          #target_transforms.ToQuadrilateral(),
-         target_transforms.ObjectDetectionOneHot(class_nums=datasets.COCOText_class_nums, add_background=True),
+         target_transforms.OneHot(class_nums=datasets.COCOText_class_nums, add_background=True),
          target_transforms.ToTensor()]
     )
 
