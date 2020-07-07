@@ -23,13 +23,13 @@ if __name__ == '__main__':
     )
     target_transform = target_transforms.Compose(
         [target_transforms.Corners2Centroids(),
-         target_transforms.OneHot(class_nums=datasets.VOC_class_nums, add_background=True),
+         target_transforms.ObjectDetectionOneHot(class_nums=datasets.VOC_class_nums, add_background=True),
          target_transforms.ToTensor()]
     )
 
     train_dataset = datasets.Compose(datasets=(datasets.VOC2007Dataset, datasets.VOC2012_TrainValDataset),
-                                     ignore=target_transforms.Ignore(difficult=True), transform=transform, target_transform=target_transform, augmentation=augmentation)
-    val_dataset = datasets.VOC2007_TestDataset(ignore=target_transforms.Ignore(difficult=True), transform=transform, target_transform=target_transform)
+                                     ignore=target_transforms.ObjectDetectionIgnore(difficult=True), transform=transform, target_transform=target_transform, augmentation=augmentation)
+    val_dataset = datasets.VOC2007_TestDataset(ignore=target_transforms.ObjectDetectionIgnore(difficult=True), transform=transform, target_transform=target_transform)
 
     #train_dataset = datasets.VOC2007Dataset(transform=transform)
     train_loader = DataLoader(train_dataset,

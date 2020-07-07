@@ -14,7 +14,7 @@ class ICDARTextSingleDatasetBase(TextDetectionDatasetBase):
         """
         :param icdar_dir: str, ICDAR directory path above 'Annotations' and 'Images'
         :param image_ext: str or None, if None, the extension will be inferred
-        :param ignore: target_transforms.Ignore
+        :param ignore: target_transforms.TextDetectionIgnore
         :param transform: instance of transforms
         :param target_transform: instance of target_transforms
         :param augmentation:  instance of augmentations

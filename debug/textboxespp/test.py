@@ -20,11 +20,11 @@ if __name__ == '__main__':
     target_transform = target_transforms.Compose(
         [target_transforms.Corners2Centroids(),
          #target_transforms.ToQuadrilateral(),
-         target_transforms.OneHot(class_nums=datasets.COCOText_class_nums, add_background=True),
+         target_transforms.ObjectDetectionOneHot(class_nums=datasets.COCOText_class_nums, add_background=True),
          target_transforms.ToTensor()]
     )
 
-    #train_dataset = datasets.COCO2014Text_Dataset(ignore=target_transforms.Ignore(illegible=True), transform=transform, target_transform=target_transform, augmentation=None)
+    #train_dataset = datasets.COCO2014Text_Dataset(ignore=target_transforms.TextDetectionIgnore(illegible=True), transform=transform, target_transform=target_transform, augmentation=None)
     test_dataset = datasets.SynthTextDetectionDataset(ignore=None, transform=transform, target_transform=target_transform, augmentation=augmentation)
 
     model = TextBoxesPP(input_shape=(size[0], size[1], 3)).cuda()

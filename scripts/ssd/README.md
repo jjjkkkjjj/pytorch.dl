@@ -199,7 +199,7 @@ See also [training-voc2007+2012.ipynb](https://github.com/jjjkkkjjj/pytorch_SSD/
   ```python
   from ssd_data import transforms, target_transforms, augmentations
   
-  ignore = target_transforms.Ignore(difficult=True)
+  ignore = target_transforms.ObjectDetectionIgnore(difficult=True)
   augmentation = augmentations.AugmentationOriginal()
   
   transform = transforms.Compose(
@@ -209,7 +209,7 @@ See also [training-voc2007+2012.ipynb](https://github.com/jjjkkkjjj/pytorch_SSD/
   )
   target_transform = target_transforms.Compose(
       [target_transforms.ToCentroids(),
-       target_transforms.OneHot(class_nums=datasets.VOC_class_nums, add_background=True),
+       target_transforms.ObjectDetectionOneHot(class_nums=datasets.VOC_class_nums, add_background=True),
        target_transforms.ToTensor()]
   )
   ```

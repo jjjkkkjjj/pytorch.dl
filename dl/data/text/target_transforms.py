@@ -4,7 +4,13 @@ from ..._utils import _check_ins
 from ..object.target_transforms import *
 from ..object.target_transforms import _IgnoreBase
 
-class Ignore(_IgnoreBase):
+class Text2Number(object):
+    def __init__(self):
+        pass
+
+
+
+class TextDetectionIgnore(_IgnoreBase):
     supported_key = ['illegible', 'difficult', 'strange']
 
     def __init__(self, **kwargs):
@@ -14,7 +20,7 @@ class Ignore(_IgnoreBase):
         self.ignore_key = []
         self.ignore_strange = False
         for key, val in kwargs.items():
-            if key in Ignore.supported_key:
+            if key in TextDetectionIgnore.supported_key:
                 val = _check_ins(key, val, bool)
                 if not val:
                     logging.warning('No meaning: {}=False'.format(key))

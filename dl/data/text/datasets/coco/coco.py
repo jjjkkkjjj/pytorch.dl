@@ -18,7 +18,7 @@ class COCOTextSingleDatasetBase(TextDetectionDatasetBase):
                 e.g.) focus = 'train2014'
         :param image_dir: str
         :param datasetType: list of str, train, val or test
-        :param ignore: target_transforms.Ignore
+        :param ignore: target_transforms.TextDetectionIgnore
         :param transform: instance of transforms
         :param target_transform: instance of target_transforms
         :param augmentation:  instance of augmentations

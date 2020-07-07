@@ -30,7 +30,7 @@ class COCOSingleDatasetBase(ObjectDetectionDatasetBase):
                 e.g.) coco_dir = '~~~~/coco2007/trainval'
         :param focus: str or str, directory name under images
                 e.g.) focus = 'train2014'
-        :param ignore: target_transforms.Ignore
+        :param ignore: target_transforms.ObjectDetectionIgnore
         :param transform: instance of transforms
         :param target_transform: instance of target_transforms
         :param augmentation:  instance of augmentations

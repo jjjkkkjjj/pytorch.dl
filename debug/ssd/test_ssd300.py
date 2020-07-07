@@ -15,7 +15,7 @@ if __name__ == '__main__':
     )
     target_transform = target_transforms.Compose(
         [target_transforms.Corners2Centroids(),
-         target_transforms.OneHot(class_nums=datasets.VOC_class_nums, add_background=True),
+         target_transforms.ObjectDetectionOneHot(class_nums=datasets.VOC_class_nums, add_background=True),
          target_transforms.ToTensor()]
     )
     test_dataset = datasets.VOC2007_TestDataset(transform=transform, target_transform=target_transform, augmentation=augmentation)

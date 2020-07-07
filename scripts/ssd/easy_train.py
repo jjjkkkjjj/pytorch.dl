@@ -151,13 +151,13 @@ transform = transforms.Compose(
 )
 target_transform = target_transforms.Compose(
     [target_transforms.Corners2Centroids(),
-     target_transforms.OneHot(class_nums=len(class_labels), add_background=True),
+     target_transforms.ObjectDetectionOneHot(class_nums=len(class_labels), add_background=True),
      target_transforms.ToTensor()]
 )
 
 if args.ignore:
     kwargs = {key: True for key in args.ignore}
-    ignore = target_transforms.Ignore(**kwargs)
+    ignore = target_transforms.ObjectDetectionIgnore(**kwargs)
 else:
     ignore = None
     if args.dataset_type == 'VOC':

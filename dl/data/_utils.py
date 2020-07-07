@@ -42,15 +42,16 @@ def _one_hot_encode(indices, class_num):
     one_hot[np.arange(size), indices] = 1
     return one_hot
 
+# not needed
 def _separate_ignore(target_transform):
     """
-    Separate Ignore by target_transform
+    Separate ObjectDetectionIgnore by target_transform
     :param target_transform:
     :return: ignore, target_transform
     """
     if target_transform:
-        from .object.target_transforms import Ignore, Compose
-        if isinstance(target_transform, Ignore):
+        from .object.target_transforms import _IgnoreBase, Compose
+        if isinstance(target_transform, _IgnoreBase):
             return target_transform, None
 
         if not isinstance(target_transform, Compose):
@@ -60,7 +61,7 @@ def _separate_ignore(target_transform):
         new_target_transform = []
         ignore = None
         for t in target_transform.target_transforms:
-            if isinstance(t, Ignore):
+            if isinstance(t, _IgnoreBase):
                 ignore = t
             else:
                 new_target_transform += [t]
@@ -69,16 +70,17 @@ def _separate_ignore(target_transform):
     else:
         return None, target_transform
 
+# not needed
 def _contain_ignore(target_transform):
     if target_transform:
-        from .object.target_transforms import Ignore, Compose
-        if isinstance(target_transform, Ignore):
-            raise ValueError('target_transforms.Ignore must be passed to \'ignore\' argument')
+        from .object.target_transforms import _IgnoreBase, Compose
+        if isinstance(target_transform, _IgnoreBase):
+            raise ValueError('target_transforms.*Ignore must be passed to \'ignore\' argument')
 
         if isinstance(target_transform, Compose):
             for t in target_transform.target_transforms:
-                if isinstance(t, Ignore):
-                    raise ValueError('target_transforms.Ignore must be passed to \'ignore\' argument')
+                if isinstance(t, _IgnoreBase):
+                    raise ValueError('target_transforms.*Ignore must be passed to \'ignore\' argument')
 
     return target_transform
 

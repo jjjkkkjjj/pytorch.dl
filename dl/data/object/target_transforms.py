@@ -21,6 +21,27 @@ class Compose(object):
         format_string += '\n)'
         return format_string
 
+##### Object Recognition #####
+
+class ObjectRecognitionOneHot(object):
+
+    def __init__(self, class_nums, add_background=True):
+        self._class_nums = class_nums
+        self._add_background = add_background
+        if add_background:
+            self._class_nums += 1
+
+    def __call__(self, bboxes, labels, flags, *args):
+        if labels.ndim != 1:
+            raise ValueError('labels might have been already one-hotted or be invalid shape')
+
+        labels = _one_hot_encode(labels.astype(np.int), self._class_nums)
+        labels = np.array(labels, dtype=np.float32)
+
+        return (bboxes, labels, flags, *args)
+
+##### Object Detection #####
+
 class ToTensor(object):
     def __call__(self, bboxes, labels, flags, *args):
         return (torch.from_numpy(bboxes), torch.from_numpy(labels), flags, *args)
@@ -79,7 +100,7 @@ class _IgnoreBase(object):
     def __call__(self, *args):
         pass
 
-class Ignore(_IgnoreBase):
+class ObjectDetectionIgnore(_IgnoreBase):
     supported_key = ['difficult', 'truncated', 'occluded', 'iscrowd']
     def __init__(self, **kwargs):
         """
@@ -87,7 +108,7 @@ class Ignore(_IgnoreBase):
         """
         self.ignore_key = []
         for key, val in kwargs.items():
-            if key in Ignore.supported_key:
+            if key in ObjectDetectionIgnore.supported_key:
                 val = _check_ins(key, val, bool)
                 if not val:
                     logging.warning('No meaning: {}=False'.format(key))
@@ -128,7 +149,7 @@ class Ignore(_IgnoreBase):
 
         return (ret_bboxes, ret_labels, ret_flags, *args)
 
-class OneHot(object):
+class ObjectDetectionOneHot(object):
     def __init__(self, class_nums, add_background=True):
         self._class_nums = class_nums
         self._add_background = add_background
@@ -137,7 +158,7 @@ class OneHot(object):
 
     def __call__(self, bboxes, labels, flags, *args):
         if labels.ndim != 1:
-            raise ValueError('labels might have been already relu_one-hotted or be invalid shape')
+            raise ValueError('labels might have been already one-hotted or be invalid shape')
 
         labels = _one_hot_encode(labels.astype(np.int), self._class_nums)
         labels = np.array(labels, dtype=np.float32)

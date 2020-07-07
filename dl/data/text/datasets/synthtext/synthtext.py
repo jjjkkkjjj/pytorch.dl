@@ -47,13 +47,17 @@ class SynthTextRecognitionSingleDatasetBase(TextRecognitionDatasetBase):
         folder, filename, text = line[:3]
         xmin, ymin, xmax, ymax = map(float, line[3:7])
         #x1, y1, x2, y2, x3, y3, x4, y4 = map(int, line[7:15])
+
         img = cv2.imread(os.path.join(self._synthtext_dir, 'SynthText', folder, filename))
-        return cv2.cvtColor(img[int(ymin):int(ymax), int(xmin):int(xmax)], cv2.COLOR_BGRA2RGB)
+
+        # crop
+        img = img[int(ymin):int(ymax), int(xmin):int(xmax)]
+        return cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
 
     def _get_target(self, index):
         line = self._gts[index]
         folder, filename, text = line[:3]
-        return text,
+        return text
 
     def __len__(self):
         return len(self._gts)
@@ -68,7 +72,7 @@ class SynthTextDetectionSingleDatasetBase(TextDetectionDatasetBase):
     def __init__(self, synthtext_dir, ignore=None, transform=None, target_transform=None, augmentation=None):
         """
         :param synthtext_dir: str, synthtext directory path above 'Annotations' and 'SynthText'
-        :param ignore: target_transforms.Ignore
+        :param ignore: target_transforms.TextDetectionIgnore
         :param transform: instance of transforms
         :param target_transform: instance of target_transforms
         :param augmentation:  instance of augmentations

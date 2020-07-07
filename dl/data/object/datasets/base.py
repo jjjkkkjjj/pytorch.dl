@@ -36,7 +36,7 @@ class ObjectRecognitionDatasetBase(_DatasetBase):
         :param augmentation:  instance of augmentations
         """
         self.transform = transform
-        self.target_transform = _contain_ignore(target_transform)
+        self.target_transform = target_transform #_contain_ignore(target_transform)
         self.augmentation = augmentation
 
     @property
@@ -109,7 +109,7 @@ class ObjectRecognitionDatasetBase(_DatasetBase):
 class ObjectDetectionDatasetBase(ObjectRecognitionDatasetBase):
     def __init__(self, ignore=None, transform=None, target_transform=None, augmentation=None):
         """
-        :param ignore: target_transforms.Ignore
+        :param ignore: target_transforms.ObjectDetectionIgnore
         :param transform: instance of transforms
         :param target_transform: instance of target_transforms
         :param augmentation:  instance of augmentations
