@@ -1,12 +1,12 @@
-from dl.data.text import datasets, target_transforms, transforms
-from dl.data.text.utils import batch_ind_fn_droptexts
+from dl.data.txtrecog import datasets, target_transforms, transforms
+#from dl.data.text.utils import batch_ind_fn_droptexts
 
 from dl.models.crnn import CRNN
 
 if __name__ == '__main__':
     augmentation = None
 
-    ignore = target_transforms.TextDetectionIgnore(difficult=True)
+    #ignore = target_transforms.TextDetectionIgnore(difficult=True)
 
     transform = transforms.Compose(
         [transforms.Resize((32, 100)),
@@ -17,7 +17,8 @@ if __name__ == '__main__':
          ]
     )
     target_transform = target_transforms.Compose(
-        [target_transforms.OneHot(class_nums=datasets.COCOText_class_nums, add_background=True),
+        [#target_transforms.Text2Number(class_labels=datasets.ALPHABET_LABELS),
+         #target_transforms.OneHot(class_nums=datasets.ALPHABET_NUMBERS, add_nolabel=False),
          target_transforms.ToTensor()]
     )
 

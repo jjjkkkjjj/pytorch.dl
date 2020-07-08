@@ -5,7 +5,7 @@ import logging
 from .._utils import _one_hot_encode, _check_ins
 from ..base.target_transforms import _IgnoreBase, Compose
 
-
+#TODO: reorder (bboxes, labels, flags, *args) to (labels, flags, bboxes, *args)
 class ToTensor(object):
     def __call__(self, bboxes, labels, flags, *args):
         return (torch.from_numpy(bboxes), torch.from_numpy(labels), flags, *args)

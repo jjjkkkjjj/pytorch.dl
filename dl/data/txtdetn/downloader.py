@@ -1,7 +1,7 @@
 choices = ['coco2014_all']
 __all__ = choices
 import logging, glob, os, shutil
-from .._downloader import _Downloader
+from ..base.downloader import _Downloader
 from .._utils import DATA_ROOT
 
 logging.basicConfig(level=logging.INFO)

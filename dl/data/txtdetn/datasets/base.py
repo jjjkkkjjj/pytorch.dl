@@ -1,18 +1,9 @@
-from ...objdetn.datasets.base import ObjectDetectionDatasetBase, ObjectRecognitionDatasetBase
+from ...objdetn.datasets.base import ObjectDetectionDatasetBase
 from ...objdetn.datasets.base import Compose
 
-import torch, string
+import torch
 import numpy as np
 
-##### Recognition #####
-ALPHABET_LABELS = list(string.ascii_lowercase)
-NUMBER_LABELS = [i for i in range(10)]
-
-class TextRecognitionDatasetBase(ObjectRecognitionDatasetBase):
-    pass
-
-
-##### Detection #####
 
 class TextDetectionDatasetBase(ObjectDetectionDatasetBase):
     def __getitem__(self, index):

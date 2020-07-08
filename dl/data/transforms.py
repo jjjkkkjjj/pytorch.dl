@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import cv2
 import logging
-from .._utils import _check_ins
+from dl.data._utils import _check_ins
 
 class Compose(object):
     def __init__(self, transforms):

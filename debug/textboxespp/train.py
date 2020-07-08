@@ -1,4 +1,4 @@
-from dl.data.txtdetn import datasets, target_transforms, transforms
+from dl.data.txtdetn import datasets, target_transforms, transforms, augmentations
 from dl.data.txtdetn.utils import batch_ind_fn_droptexts
 
 from dl.models import TextBoxesPP
@@ -12,10 +12,10 @@ from torch.optim.adam import Adam
 
 if __name__ == '__main__':
 
-    #augmentation = augmentations.RandomSampled()
-    augmentation = None
+    augmentation = augmentations.RandomSampled()
+    #augmentation = None
 
-    ignore = target_transforms.TextDetectionIgnore(strange=True)
+    ignore = target_transforms.Ignore(strange=True)
 
     transform = transforms.Compose(
         [transforms.Resize((384, 384)),
@@ -29,7 +29,7 @@ if __name__ == '__main__':
          target_transforms.ToTensor()]
     )
 
-    #train_dataset = datasets.COCO2014Text_Dataset(ignore=target_transforms.TextDetectionIgnore(illegible=True), transform=transform, target_transform=target_transform, augmentation=None)
+    #train_dataset = datasets.COCO2014Text_Dataset(ignore=target_transforms.Ignore(illegible=True), transform=transform, target_transform=target_transform, augmentation=None)
     #train_dataset = datasets.SynthTextDetectionDataset(ignore=None, transform=transform, target_transform=target_transform, augmentation=augmentation)
     #train_dataset = datasets.SynthTextDetectionDataset(ignore=None, transform=transform, target_transform=target_transform, augmentation=augmentation)
     #train_dataset = datasets.ICDAR2015TextDataset(ignore=None, transform=transform, target_transform=target_transform, augmentation=augmentation)

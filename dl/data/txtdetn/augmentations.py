@@ -13,7 +13,7 @@ class _SampledPatchOp(object):
 
 class EntireSample(_SampledPatchOp):
     def __call__(self, img, bboxes, labels, flags, *args):
-        return img, (bboxes, labels, flags, args)
+        return img, (bboxes, labels, flags, *args)
 
 
 class RandomThresSampledPatch(_SampledPatchOp):

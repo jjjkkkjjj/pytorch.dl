@@ -1,4 +1,5 @@
-from dl.data.objdetn import datasets, utils, target_transforms, transforms, augmentations
+from dl.data.objdetn import datasets, utils, target_transforms, augmentations
+from dl.data import transforms
 from dl.loss.ssd import SSDLoss
 from dl.models.ssd import SSD300
 from dl.optim.scheduler import IterStepLR

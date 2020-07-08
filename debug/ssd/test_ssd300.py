@@ -1,4 +1,5 @@
-from dl.data.objdetn import datasets, utils, target_transforms, transforms
+from dl.data.objdetn import datasets, utils, target_transforms
+from dl.data import transforms
 
 from dl.models.ssd.ssd300 import SSD300
 from dl.models.ssd.core import toVisualizeRGBImg

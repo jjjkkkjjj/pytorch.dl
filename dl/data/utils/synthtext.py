@@ -48,7 +48,7 @@ def VOCGenerator(basedir, imagedirname='SynthText', skip_missing=False, encoding
         depthET.text = str(c)
 
         # convert txts to list of str
-        # I don't know why txts is
+        # I don't know why texts is
         # ['Lines:\nI lost\nKevin ', 'will                ', 'line\nand            ',
         # 'and\nthe             ', '(and                ', 'the\nout             ',
         # 'you                 ', "don't\n pkg          "]
@@ -162,6 +162,77 @@ def TextRecogCSVGenerator(basedir, imagedirname='SynthText', skip_missing=False,
         writer = csv.writer(f)
         writer.writerows(lines)
 
+def TextRecogOnlyAlphabetNumberCSVGenerator(basedir, imagedirname='SynthText', skip_missing=False, encoding='utf-8'):
+
+    lines = [['folder', 'filename', 'text', 'xmin', 'ymin', 'xmax', 'ymax',
+             'x1', 'y1', 'x2', 'y2', 'x3', 'y3', 'x4', 'y4']]
+
+    def csvgenerator(annodir, imagedir, cbb, wBB, imname, txts, **kwargs):
+        lines = kwargs.get('lines')
+
+        imgpath = os.path.join(imagedir, imname)
+
+        if not os.path.exists(imgpath):
+            if not skip_missing:
+                raise FileNotFoundError('{} was not found'.format(imgpath))
+            else:
+                logging.warning('Missing image: {}'.format(imgpath))
+                raise _Skip()
+
+        folder = os.path.dirname(imname)
+        filename = os.path.basename(imname)
+
+        # convert txts to list of str
+        # I don't know why txts is
+        # ['Lines:\nI lost\nKevin ', 'will                ', 'line\nand            ',
+        # 'and\nthe             ', '(and                ', 'the\nout             ',
+        # 'you                 ', "don't\n pkg          "]
+        # there is strange blank and the length of txts is different from the one of wBB
+        txts = ' '.join(txts.tolist()).split()
+        text_num = len(txts)
+
+        if wBB.ndim == 2:
+            # convert shape=(2, 4,) to (2, 4, 1)
+            wBB = np.expand_dims(wBB, 2)
+
+        assert text_num == wBB.shape[2], 'The length of text and wordBB must be same, but got {} and {}'.format(
+            text_num, wBB.shape[2])
+
+        charind = 0
+        # replace non-alphanumeric characters with *
+        alltexts_asterisk = ''.join([re.sub(r'[^A-Za-z0-9]', '*', text) for text in txts])
+        assert len(alltexts_asterisk) == cbb.shape[2], 'The length of characters and cbb must be same, but got {} and {}'.format(
+            len(alltexts_asterisk), cbb.shape[2])
+        for b in range(text_num):
+            text = txts[b]
+
+            alphanumerictext = re.findall(r'[A-Za-z0-9]+', text)
+
+            for ant in alphanumerictext:
+                charind = alltexts_asterisk.index(ant, charind)
+
+                # quad
+                quad = [cbb[0, 0, charind], cbb[1, 0, charind], # top-left
+                        cbb[0, 1, charind+len(ant)-1], cbb[1, 1, charind+len(ant)-1],
+                        cbb[0, 2, charind+len(ant)-1], cbb[1, 2, charind+len(ant)-1],
+                        cbb[0, 3, charind], cbb[1, 3, charind]]
+
+                # corner
+                corner = [str(np.min(quad)), str(np.min(quad)),
+                          str(np.max(quad)), str(np.max(quad))]
+
+                quad = list(map(str, quad))
+
+                lines += [[folder, filename, ant, *corner, *quad]]
+
+                charind += len(ant)
+
+    _gtmatRecognizer(csvgenerator, basedir, imagedirname, lines=lines)
+
+    annodir = os.path.join(basedir, 'Annotations')
+    with open(os.path.join(annodir, 'gt_alphanumeric.csv'), 'w') as f:
+        writer = csv.writer(f)
+        writer.writerows(lines)
 
 def _gtmatRecognizer(generator, basedir, imagedirname='SynthText', **kwargs):
     """
@@ -256,3 +327,6 @@ def _gtmatRecognizer(generator, basedir, imagedirname='SynthText', **kwargs):
 
     print()
     logging.info('Finished!!!')
+
+def get_characters():
+    pass

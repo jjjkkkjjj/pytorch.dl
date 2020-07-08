@@ -100,7 +100,8 @@ from torch.utils.data import DataLoader
 from torch.optim.adam import Adam
 from torch.optim.sgd import SGD
 
-from dl.data.objdetn import datasets, utils, target_transforms, transforms, augmentations
+from dl.data.objdetn import datasets, utils, target_transforms, augmentations
+from dl.data import transforms
 from dl.models.ssd import *
 from dl.loss.ssd import SSDLoss
 from dl.optim.scheduler import IterMultiStepLR

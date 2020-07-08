@@ -156,7 +156,7 @@ target_transform = target_transforms.Compose(
 
 if args.ignore:
     kwargs = {key: True for key in args.ignore}
-    ignore = target_transforms.TextDetectionIgnore(**kwargs)
+    ignore = target_transforms.Ignore(**kwargs)
 else:
     ignore = None
 

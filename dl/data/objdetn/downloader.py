@@ -4,7 +4,7 @@ __all__ = choices
 import logging, os, shutil, glob
 
 from .._utils import DATA_ROOT
-from .._downloader import _Downloader
+from ..base.downloader import _Downloader
 
 def voc2007_trainval():
     logging.info('Downloading voc2007_trainval')

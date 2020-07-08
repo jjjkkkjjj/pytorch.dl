@@ -1,16 +1,26 @@
-import logging
-from ..._utils import _check_ins
+import logging, torch
+import numpy as np
 
-from ..objdetn.target_transforms import *
+from ..._utils import _check_ins
+from ..objdetn.target_transforms import (
+    Compose,
+    Corners2Centroids,
+    Corners2MinMax,
+    Centroids2Corners,
+    Centroids2MinMax,
+    MinMax2Corners,
+    MinMax2Centroids,
+    OneHot
+)
 from ..objdetn.target_transforms import _IgnoreBase
 
-class Text2Number(object):
-    def __init__(self):
-        pass
+#class Text2Number(object):
+#    def __init__(self):
+#        pass
 
 
 
-class TextDetectionIgnore(_IgnoreBase):
+class Ignore(_IgnoreBase):
     supported_key = ['illegible', 'difficult', 'strange']
 
     def __init__(self, **kwargs):
@@ -20,7 +30,7 @@ class TextDetectionIgnore(_IgnoreBase):
         self.ignore_key = []
         self.ignore_strange = False
         for key, val in kwargs.items():
-            if key in TextDetectionIgnore.supported_key:
+            if key in Ignore.supported_key:
                 val = _check_ins(key, val, bool)
                 if not val:
                     logging.warning('No meaning: {}=False'.format(key))
@@ -69,7 +79,7 @@ class TextDetectionIgnore(_IgnoreBase):
         ret_labels = np.array(ret_labels, dtype=np.float32)
         ret_quads = np.array(ret_quads, dtype=np.float32)
 
-        return ret_bboxes, ret_labels, ret_flags, ret_quads, ret_texts
+        return (ret_bboxes, ret_labels, ret_flags, ret_quads, ret_texts)
 
 class ToTensor(object):
     def __call__(self, bboxes, labels, flags, quads, texts):
@@ -82,7 +92,7 @@ class ToTensor(object):
             texts
         :return:
         """
-        return torch.from_numpy(bboxes), torch.from_numpy(labels), flags, torch.from_numpy(quads), texts
+        return (torch.from_numpy(bboxes), torch.from_numpy(labels), flags, torch.from_numpy(quads), texts)
 
 
 class ToQuadrilateral(object):
@@ -121,4 +131,4 @@ class ToQuadrilateral(object):
         for b in range(box_num):
             quads[b] = quads[b, np.roll(trans, inds[b])]
 
-        return bboxes, labels, flags, quads.reshape((-1, 8)), texts
+        return (bboxes, labels, flags, quads.reshape((-1, 8)), texts)
