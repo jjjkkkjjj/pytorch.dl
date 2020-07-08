@@ -43,7 +43,7 @@ class ToTensor(object):
 class Resize(object):
     def __init__(self, size):
         """
-        :param size: 2d-array-like, (height, width)
+        :param size: 2d-array-like, (width, height)
         """
         self._size = size
 
@@ -63,7 +63,8 @@ class Grayscale(object):
         img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
         if self._last_dims:
             img = np.expand_dims(img, -1)
-            img = np.ascontiguousarray(np.broadcast_to(img, self._last_dims))
+            h, w = img.shape[:2]
+            img = np.ascontiguousarray(np.broadcast_to(img, (h, w, self._last_dims)))
 
         return img
 

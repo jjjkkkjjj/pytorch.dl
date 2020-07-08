@@ -218,8 +218,8 @@ def TextRecogOnlyAlphabetNumberCSVGenerator(basedir, imagedirname='SynthText', s
                         cbb[0, 3, charind], cbb[1, 3, charind]]
 
                 # corner
-                corner = [str(np.min(quad)), str(np.min(quad)),
-                          str(np.max(quad)), str(np.max(quad))]
+                corner = [str(np.min(quad[0::2])), str(np.min(quad[1::2])),
+                          str(np.max(quad[0::2])), str(np.max(quad[1::2]))]
 
                 quad = list(map(str, quad))
 

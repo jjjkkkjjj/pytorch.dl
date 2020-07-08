@@ -16,9 +16,9 @@ class SynthTextRecognitionSingleDatasetBase(TextRecognitionDatasetBase):
                          augmentation=augmentation)
 
         self._synthtext_dir = synthtext_dir
-        self._class_labels = _check_ins('class_labels', class_labels, (list, tuple), allow_none=True, default=ALPHABET_LABELS)
+        self._class_labels = _check_ins('class_labels', class_labels, (list, tuple), allow_none=True, default=ALPHABET_LABELS+NUMBER_LABELS)
 
-        annopaths = os.path.join(self._synthtext_dir, 'Annotations', 'gt.csv')
+        annopaths = os.path.join(self._synthtext_dir, 'Annotations', 'gt_alphanumeric.csv')
         if not os.path.exists(annopaths):
             raise FileNotFoundError('{} was not found'.format(annopaths))
 
