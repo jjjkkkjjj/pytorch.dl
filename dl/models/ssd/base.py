@@ -9,7 +9,7 @@ from ..layers import *
 from .core.inference import *
 from ..vgg.base import get_model_url
 from ..base import ObjectDetectionModelBase
-
+from ...data.utils.converter import toVisualizeRectLabelRGBimg
 
 class SSDTrainConfig(object):
     def __init__(self, **kwargs):
@@ -327,8 +327,8 @@ class SSDBase(ObjectDetectionModelBase):
 
             img_num = normed_imgs.shape[0]
             if visualize:
-                visualized_imgs = [toVisualizeRGBImg(orig_imgs[i], locs=infers[i][:, 2:], inf_labels=infers[i][:, 0],
-                                                     inf_confs=infers[i][:, 1], classe_labels=self.class_labels, verbose=False) for i in range(img_num)]
+                visualized_imgs = [toVisualizeRectLabelRGBimg(orig_imgs[i], locs=infers[i][:, 2:], inf_labels=infers[i][:, 0],
+                                                              inf_confs=infers[i][:, 1], classe_labels=self.class_labels, verbose=False) for i in range(img_num)]
                 return infers, visualized_imgs, orig_imgs
             else:
                 return infers, orig_imgs

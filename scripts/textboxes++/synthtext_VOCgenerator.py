@@ -1,4 +1,4 @@
-from dl.data.utils.synthtext import VOCGenerator
+from dl.data.generator.synthtext import VOCGenerator
 
 import argparse
 

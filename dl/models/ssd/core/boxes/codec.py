@@ -1,7 +1,7 @@
 from torch import nn
 import torch
 
-from .utils import matching_strategy
+from .utils import matching_strategy, matching_strategy_quads
 from ....._utils import _check_norm, _check_ins
 import torchvision
 
@@ -205,7 +205,7 @@ class TextBoxEncoder(EncoderBase):
         # matching
         # pos_indicator: Bool Tensor, shape = (batch, default box num). this represents whether each default box is object or background.
         # targets: Tensor, shape = (batch, default box num, 12+class_num) including background
-        pos_indicator, targets = matching_strategy(targets, dboxes, batch_num=batch_num)
+        pos_indicator, targets = matching_strategy_quads(targets, dboxes, batch_num=batch_num)
 
         # encoding
         # targets_loc: Tensor, shape = (batch, default boxes num, 4)

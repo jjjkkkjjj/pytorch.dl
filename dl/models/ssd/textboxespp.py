@@ -5,7 +5,7 @@ from .core.boxes.dbox import DBoxTextBoxOriginal
 from .core.boxes.codec import TextBoxCodec
 from .core.predict import TextBoxPredictor
 from .core.inference import InferenceBox, textbox_non_maximum_suppression
-from .core.inference import toVisualizeInfQuadsRGBimg
+from ...data.utils.converter import toVisualizeQuadsLabelRGBimg
 
 from torch import nn
 
@@ -130,9 +130,9 @@ class TextBoxesPP(SSDvggBase):
         if visualize:
             img_num = orig_imgs.shape[0]
 
-            visualized_imgs = [toVisualizeInfQuadsRGBimg(orig_imgs[i], poly_pts=infers[i][:, 6:], inf_labels=infers[i][:, 0],
-                                                         inf_confs=infers[i][:, 1], classe_labels=self.class_labels,
-                                                         verbose=False) for i in range(img_num)]
+            visualized_imgs = [toVisualizeQuadsLabelRGBimg(orig_imgs[i], poly_pts=infers[i][:, 6:], inf_labels=infers[i][:, 0],
+                                                           inf_confs=infers[i][:, 1], classe_labels=self.class_labels,
+                                                           verbose=False) for i in range(img_num)]
 
             return infers, visualized_imgs, orig_imgs
         else:

@@ -1,6 +1,6 @@
 import sys
 sys.path.append('../../')
-from dl.data.utils.synthtext import TextRecogCSVGenerator, TextRecogOnlyAlphabetNumberCSVGenerator
+from dl.data.generator.synthtext import TextRecogCSVGenerator, TextRecogOnlyAlphabetNumberCSVGenerator
 
 import argparse
 
