@@ -1,6 +1,6 @@
 import os, cv2, logging, time, csv
 
-from .base import TextRecognitionDatasetBase, ALPHABET_LABELS, NUMBER_LABELS
+from .base import TextRecognitionDatasetBase, ALPHANUMERIC_LABELS
 from ..._utils import _check_ins, DATA_ROOT
 
 class SynthTextRecognitionSingleDatasetBase(TextRecognitionDatasetBase):
@@ -16,7 +16,7 @@ class SynthTextRecognitionSingleDatasetBase(TextRecognitionDatasetBase):
                          augmentation=augmentation)
 
         self._synthtext_dir = synthtext_dir
-        self._class_labels = _check_ins('class_labels', class_labels, (list, tuple), allow_none=True, default=ALPHABET_LABELS+NUMBER_LABELS)
+        self._class_labels = _check_ins('class_labels', class_labels, (list, tuple), allow_none=True, default=ALPHANUMERIC_LABELS)
 
         annopaths = os.path.join(self._synthtext_dir, 'Annotations', 'gt_alphanumeric.csv')
         if not os.path.exists(annopaths):
@@ -47,7 +47,7 @@ class SynthTextRecognitionSingleDatasetBase(TextRecognitionDatasetBase):
     def _get_target(self, index):
         line = self._gts[index]
         folder, filename, text = line[:3]
-        return text
+        return text,
 
     def __len__(self):
         return len(self._gts)

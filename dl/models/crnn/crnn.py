@@ -2,7 +2,7 @@ from ..layers import *
 from ..base import ImageRecognitionBase
 
 import string
-
+from torch import functional as F
 
 class CRNN(ImageRecognitionBase):
     def __init__(self, class_labels=tuple(string.ascii_lowercase), input_shape=(32, None, 1), leakyReLu=False):
@@ -35,14 +35,27 @@ class CRNN(ImageRecognitionBase):
 
         self.rec_layers = nn.ModuleDict(rec_layers)
 
-    def forward(self, x):
-        features = self.conv_layers(x)
+    def forward(self, x, targets=None):
+        """
+        :param x: input images tensor, shape = (b, c, h, w)
+        :return:
+            output: output tensor, shape = (times, b, class_nums)
+        """
 
-        b, c, h, w = features.shape
+        for name, layer in self.conv_layers.items():
+            x = layer(x)
+
+        b, c, h, w = x.shape
         assert h == 1, "the height of conv must be 1"
-        features = features.squeeze(2) # remove height due to 1
-        features = features.permute(2, 0, 1)  # [w, b, c]
+        # feature
+        x = x.squeeze(2) # remove height due to 1
+        x = x.permute(2, 0, 1)  # [w, b, c]
 
-        output = self.rec_layers(features)
-        return output
+        for name, layer in self.rec_layers.items():
+            x = layer(x)
 
+        if self.training:
+            # apply log softmax for ctc loss
+            return F.log_softmax(x, dim=2)
+        else:
+            return F.softmax(x, dim=2)
