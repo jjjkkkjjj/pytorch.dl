@@ -6,7 +6,7 @@ from math import sqrt as sqrt
 from itertools import product as product
 
 from dl.models.ssd.core.boxes import DBoxSSDOriginal
-from dl.models.ssd.core.boxes import Codec
+from dl.models.ssd.core.boxes import SSDCodec
 
 import os
 
@@ -242,7 +242,7 @@ class SSD(nn.Module):
 
         preds = torch.cat((loc.view(loc.size(0), -1, 4), conf.view(conf.size(0), -1, self.num_classes)), dim=-1)
 
-        codec = Codec()
+        codec = SSDCodec()
         pos, gts = codec.encoder(targets, self.defaultBox.dboxes.to(preds.device), batch_num=len(targets))
 
         output = (

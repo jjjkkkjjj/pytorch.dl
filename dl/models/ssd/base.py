@@ -74,7 +74,7 @@ class SSDBase(ObjectDetectionModelBase):
         :param train_config: SSDTrainConfig
         :param val_config: SSDValConfig
         :param defaultBox: instance inheriting DefaultBoxBase
-        :param codec: Codec, if it's None, use default Codec
+        :param codec: SSDCodec, if it's None, use default SSDCodec
         :param predictor: Predictor, if it's None, use default Predictor
         :param inferenceBox: InferenceBox, if it's None, use default InferenceBox
         """
@@ -83,7 +83,7 @@ class SSDBase(ObjectDetectionModelBase):
         super().__init__(train_config.class_labels, train_config.input_shape)
 
         self.codec = _check_ins('codec', codec, CodecBase, allow_none=True,
-                                default=Codec(norm_means=self.codec_means, norm_stds=self.codec_stds))
+                                default=SSDCodec(norm_means=self.codec_means, norm_stds=self.codec_stds))
         self.defaultBox = _check_ins('defaultBox', defaultBox, DefaultBoxBase)
 
         self.predictor = _check_ins('predictor', predictor, PredictorBase, allow_none=True,
@@ -359,7 +359,7 @@ class SSDvggBase(SSDBase):
         :param train_config: SSDTrainConfig
         :param val_config: SSDValonfig
         :param defaultBox: instance inheriting DefaultBoxBase
-        :param codec: Codec, if it's None, use default Codec
+        :param codec: SSDCodec, if it's None, use default SSDCodec
         :param predictor: Predictor, if it's None, use default Predictor
         :param inferenceBox: InferenceBox, if it's None, use default InferenceBox
         """

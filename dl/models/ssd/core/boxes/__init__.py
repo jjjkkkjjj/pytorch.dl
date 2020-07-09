@@ -6,4 +6,4 @@ from .dbox import *
 __all__ += ['DBoxSSDOriginal',]
 
 from .codec import *
-__all__ += ['Codec', 'Encoder', 'Decoder']
+__all__ += ['SSDCodec', 'TextBoxCodec']

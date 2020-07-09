@@ -3,21 +3,12 @@ import torch
 
 from .utils import matching_strategy, matching_strategy_quads
 from ....._utils import _check_norm, _check_ins
-from ....utils.codec import CodecBase, EncoderBase, DecoderBase
+from ....utils.codec import CodecBase
 
 import torchvision
 
 
-class Codec(CodecBase):
-    def __init__(self, norm_means=(0.0, 0.0, 0.0, 0.0), norm_stds=(0.1, 0.1, 0.2, 0.2)):
-        # shape = (1, 1, 4=(cx, cy, w, h)) or (1, 1, 1)
-        self.norm_means = norm_means
-        self.norm_stds = norm_stds
-
-        super().__init__(Encoder(self.norm_means, self.norm_stds), Decoder(self.norm_means, self.norm_stds))
-
-
-class Encoder(EncoderBase):
+class SSDCodec(CodecBase):
     def __init__(self, norm_means=(0.0, 0.0, 0.0, 0.0), norm_stds=(0.1, 0.1, 0.2, 0.2)):
         super().__init__()
 
@@ -28,8 +19,7 @@ class Encoder(EncoderBase):
         self.norm_means = norm_means.unsqueeze(0).unsqueeze(0)
         self.norm_stds = norm_stds.unsqueeze(0).unsqueeze(0)
 
-
-    def forward(self, targets, dboxes, batch_num):
+    def encoder(self, targets, dboxes, batch_num):
         """
         :param targets: Tensor, shape is (batch*object num(batch), 1+4+class_labels)
         :param dboxes: Tensor, shape is (total_dbox_nums, 4=(cx,cy,w,h))
@@ -67,31 +57,8 @@ class Encoder(EncoderBase):
 
         return pos_indicator, targets
 
-    def to(self, *args, **kwargs):
-        self.norm_means = self.norm_means.to(*args, **kwargs)
-        self.norm_stds = self.norm_stds.to(*args, **kwargs)
 
-        return super().to(*args, **kwargs)
-
-    def cuda(self, device=None):
-        self.norm_means = self.norm_means.cuda(device)
-        self.norm_stds = self.norm_stds.cuda(device)
-
-        return super().cuda(device)
-
-
-class Decoder(DecoderBase):
-    def __init__(self, norm_means=(0.0, 0.0, 0.0, 0.0), norm_stds=(0.1, 0.1, 0.2, 0.2)):
-        super().__init__()
-
-        norm_means = _check_norm('norm_means', norm_means)
-        norm_stds = _check_norm('norm_stds', norm_stds)
-
-        # shape = (1, 1, 4=(cx, cy, w, h)) or (1, 1, 1)
-        self.norm_means = norm_means.unsqueeze(0).unsqueeze(0)
-        self.norm_stds = norm_stds.unsqueeze(0).unsqueeze(0)
-
-    def forward(self, predicts, default_boxes):
+    def decoder(self, predicts, default_boxes):
         """
         Opposite to above procession
         :param predicts: Tensor, shape = (batch, default boxes num, 4 + class_nums)
@@ -134,22 +101,8 @@ class Decoder(DecoderBase):
         return super().cuda(device)
 
 
+
 class TextBoxCodec(CodecBase):
-    def __init__(self, norm_means=(0.0, 0.0, 0.0, 0.0,
-                                   0.0, 0.0, 0.0, 0.0,
-                                   0.0, 0.0, 0.0, 0.0),
-                       norm_stds=(0.1, 0.1, 0.2, 0.2,
-                                  0.1, 0.1, 0.1, 0.1,
-                                  0.1, 0.1, 0.1, 0.1)):
-        # shape = (1, 1, 12=(cx, cy, w, h, x1, y1,...)) or (1, 1, 1)
-        self.norm_means = norm_means
-        self.norm_stds = norm_stds
-
-        super().__init__(TextBoxEncoder(self.norm_means, self.norm_stds),
-                         TextBoxDecoder(self.norm_means, self.norm_stds))
-
-
-class TextBoxEncoder(EncoderBase):
     def __init__(self, norm_means=(0.0, 0.0, 0.0, 0.0,
                                    0.0, 0.0, 0.0, 0.0,
                                    0.0, 0.0, 0.0, 0.0),
@@ -165,8 +118,7 @@ class TextBoxEncoder(EncoderBase):
         self.norm_means = norm_means.unsqueeze(0).unsqueeze(0)
         self.norm_stds = norm_stds.unsqueeze(0).unsqueeze(0)
 
-
-    def forward(self, targets, dboxes, batch_num):
+    def encoder(self, targets, dboxes, batch_num):
         """
         :param targets: Tensor, shape is (batch*object num(batch), 4=(cx,cy,w,h)+8=(x1,y1,x2,y2,...)+class_labels)
         :param dboxes: Tensor, shape is (total_dbox_nums, 4=(cx,cy,w,h))
@@ -217,36 +169,7 @@ class TextBoxEncoder(EncoderBase):
 
         return pos_indicator, targets
 
-    def to(self, *args, **kwargs):
-        self.norm_means = self.norm_means.to(*args, **kwargs)
-        self.norm_stds = self.norm_stds.to(*args, **kwargs)
-
-        return super().to(*args, **kwargs)
-
-    def cuda(self, device=None):
-        self.norm_means = self.norm_means.cuda(device)
-        self.norm_stds = self.norm_stds.cuda(device)
-
-        return super().cuda(device)
-
-
-class TextBoxDecoder(DecoderBase):
-    def __init__(self, norm_means=(0.0, 0.0, 0.0, 0.0,
-                                   0.0, 0.0, 0.0, 0.0,
-                                   0.0, 0.0, 0.0, 0.0),
-                       norm_stds=(0.1, 0.1, 0.2, 0.2,
-                                  0.1, 0.1, 0.1, 0.1,
-                                  0.1, 0.1, 0.1, 0.1)):
-        super().__init__()
-
-        norm_means = _check_norm('norm_means', norm_means)
-        norm_stds = _check_norm('norm_stds', norm_stds)
-
-        # shape = (1, 1, 4=(cx, cy, w, h)) or (1, 1, 1)
-        self.norm_means = norm_means.unsqueeze(0).unsqueeze(0)
-        self.norm_stds = norm_stds.unsqueeze(0).unsqueeze(0)
-
-    def forward(self, predicts, default_boxes):
+    def decoder(self, predicts, default_boxes):
         """
         Opposite to above procession
         :param predicts: Tensor, shape = (batch, default boxes num, 14=(4+8+2))
@@ -288,6 +211,7 @@ class TextBoxDecoder(DecoderBase):
 
         return predicts
 
+
     def to(self, *args, **kwargs):
         self.norm_means = self.norm_means.to(*args, **kwargs)
         self.norm_stds = self.norm_stds.to(*args, **kwargs)
@@ -299,3 +223,4 @@ class TextBoxDecoder(DecoderBase):
         self.norm_stds = self.norm_stds.cuda(device)
 
         return super().cuda(device)
+
