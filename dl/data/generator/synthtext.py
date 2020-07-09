@@ -172,6 +172,8 @@ def TextRecogOnlyAlphabetNumberCSVGenerator(basedir, imagedirname='SynthText', s
 
         imgpath = os.path.join(imagedir, imname)
 
+        img = cv2.imread(imgpath)
+        h, w, _ = img.shape
         if not os.path.exists(imgpath):
             if not skip_missing:
                 raise FileNotFoundError('{} was not found'.format(imgpath))
@@ -218,11 +220,15 @@ def TextRecogOnlyAlphabetNumberCSVGenerator(basedir, imagedirname='SynthText', s
                         cbb[0, 3, charind], cbb[1, 3, charind]]
 
                 # corner
-                corner = [str(np.min(quad[0::2])), str(np.min(quad[1::2])),
-                          str(np.max(quad[0::2])), str(np.max(quad[1::2]))]
+                xmin, ymin, xmax, ymax = max(np.min(quad[0::2]), 0), max(np.min(quad[1::2]), 0), min(np.max(quad[0::2]), w), min(np.max(quad[1::2]), h)
+                _h, _w, _ = img[int(ymin):int(ymax), int(xmin):int(xmax)].shape
+                if _h == 0 or _w == 0:
+                    charind += len(ant)
+                    continue
+                corner = [xmin, ymin, xmax, ymax]
 
                 quad = list(map(str, quad))
-
+                corner = list(map(str, corner))
                 lines += [[folder, filename, ant, *corner, *quad]]
 
                 charind += len(ant)

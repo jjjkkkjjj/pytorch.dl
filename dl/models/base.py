@@ -69,6 +69,9 @@ class ImageRecognitionBase(ModelBase):
         """
         pass
 
+class ObjectRecognitionModelBase(ImageRecognitionBase):
+    pass
+
 class ObjectDetectionModelBase(ImageRecognitionBase):
     @property
     def class_nums_with_background(self):

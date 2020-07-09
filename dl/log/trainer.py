@@ -232,8 +232,54 @@ class TrainJupyterLoggerBase(TrainLoggerBase):
         else:
             print(saved_info)
 
+from ..models.base import ObjectRecognitionModelBase
+def _learn_objrecog(self, images, targets):
+    images = images.to(self.device)
+    targets = [target.to(self.device) for target in targets]
+
+    predicts = self.model(images, targets)
+    if not isinstance(predicts, (tuple, list)):
+        raise ValueError('model\'s output must be tuple or list, but got {}'.format(predicts.__name__))
+
+    loss = self.loss_module(*predicts)
+    loss.backward()
+
+    return ['loss'], [loss.item()]
+
+class TrainObjectRecognitionConsoleLogger(TrainConsoleLoggerBase):
+    model: ObjectRecognitionModelBase
+
+    def __init__(self, loss_module, model, optimizer, scheduler=None):
+        super().__init__(loss_module, model, optimizer, scheduler)
+        _ = _check_ins('model', model, (ObjectRecognitionModelBase, nn.DataParallel))
+
+    def learn(self, images, targets):
+        return _learn_objrecog(self, images, targets)
+
+class TrainObjectRecognitionJupyterLogger(TrainJupyterLoggerBase):
+    model: ObjectRecognitionModelBase
+
+    def __init__(self, live_graph, loss_module, model, optimizer, scheduler=None):
+        super().__init__(live_graph, loss_module, model, optimizer, scheduler)
+        _ = _check_ins('model', model, (ObjectRecognitionModelBase, nn.DataParallel))
+
+    def learn(self, images, targets):
+        return _learn_objrecog(self, images, targets)
+
 
 from ..models.base import ObjectDetectionModelBase
+def _learn_objdetn(self, images, targets):
+    images = images.to(self.device)
+    targets = [target.to(self.device) for target in targets]
+
+    pos_indicator, predicts, gts = self.model(images, targets)
+
+    confloss, locloss = self.loss_module(pos_indicator, predicts, gts)
+    loss = confloss + self.loss_module.alpha * locloss
+    loss.backward()
+
+    return ['total', 'loc', 'conf'], [loss.item(), locloss.item(), confloss.item()]
+
 class TrainObjectDetectionConsoleLogger(TrainConsoleLoggerBase):
     model: ObjectDetectionModelBase
 
@@ -242,16 +288,7 @@ class TrainObjectDetectionConsoleLogger(TrainConsoleLoggerBase):
         _ = _check_ins('model', model, (ObjectDetectionModelBase, nn.DataParallel))
 
     def learn(self, images, targets):
-        images = images.to(self.device)
-        targets = [target.to(self.device) for target in targets]
-
-        pos_indicator, predicts, gts = self.model(images, targets)
-
-        confloss, locloss = self.loss_module(pos_indicator, predicts, gts)
-        loss = confloss + self.loss_module.alpha * locloss
-        loss.backward()
-
-        return ['total', 'loc', 'conf'], [loss.item(), locloss.item(), confloss.item()]
+        return _learn_objdetn(self, images, targets)
 
 class TrainObjectDetectionJupyterLogger(TrainJupyterLoggerBase):
     model: ObjectDetectionModelBase
@@ -261,13 +298,4 @@ class TrainObjectDetectionJupyterLogger(TrainJupyterLoggerBase):
         _ = _check_ins('model', model, (ObjectDetectionModelBase, nn.DataParallel))
 
     def learn(self, images, targets):
-        images = images.to(self.device)
-        targets = [target.to(self.device) for target in targets]
-
-        pos_indicator, predicts, gts = self.model(images, targets)
-
-        confloss, locloss = self.loss_module(pos_indicator, predicts, gts)
-        loss = confloss + self.loss_module.alpha * locloss
-        loss.backward()
-
-        return ['total', 'loc', 'conf'], [loss.item(), locloss.item(), confloss.item()]
+        return _learn_objdetn(self, images, targets)

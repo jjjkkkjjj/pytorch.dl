@@ -1,4 +1,5 @@
 import os, cv2, logging, time, csv
+import numpy as np
 
 from .base import TextRecognitionDatasetBase, ALPHANUMERIC_LABELS
 from ..._utils import _check_ins, DATA_ROOT
@@ -37,12 +38,15 @@ class SynthTextRecognitionSingleDatasetBase(TextRecognitionDatasetBase):
         folder, filename, text = line[:3]
         xmin, ymin, xmax, ymax = map(float, line[3:7])
         #x1, y1, x2, y2, x3, y3, x4, y4 = map(int, line[7:15])
-
         img = cv2.imread(os.path.join(self._synthtext_dir, 'SynthText', folder, filename))
+        h, w, _ = img.shape
+        # clip
+        xmin, ymin, xmax, ymax = max(xmin, 0), max(ymin, 0), min(xmax, w), min(ymax, h)
 
         # crop
-        img = img[int(ymin):int(ymax), int(xmin):int(xmax)]
-        return cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
+        img = img[int(ymin):int(ymax), int(xmin):int(xmax)].copy()
+
+        return cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32)
 
     def _get_target(self, index):
         line = self._gts[index]

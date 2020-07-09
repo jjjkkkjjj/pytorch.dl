@@ -1,11 +1,12 @@
 from ..layers import *
-from ..base import ImageRecognitionBase
+from ..base import ObjectRecognitionModelBase
+from .codec import CTCCodec
 
-import string
-from torch import functional as F
+import string, logging
+from torch.nn import functional as F
 
-class CRNN(ImageRecognitionBase):
-    def __init__(self, class_labels=tuple(string.ascii_lowercase), input_shape=(32, None, 1), leakyReLu=False):
+class CRNN(ObjectRecognitionModelBase):
+    def __init__(self, class_labels=tuple(string.ascii_lowercase), input_shape=(32, None, 1), leakyReLu=False, blankIndex=0):
         super().__init__(class_labels, input_shape)
         self.leakyReLu = leakyReLu
 
@@ -35,12 +36,31 @@ class CRNN(ImageRecognitionBase):
 
         self.rec_layers = nn.ModuleDict(rec_layers)
 
+        self.blankIndex = blankIndex
+        self.codec = CTCCodec(class_labels, blankIndex)
+
+    @property
+    def encoder(self):
+        return self.codec.encoder
+    @property
+    def decoder(self):
+        return self.codec.decoder
+
+
     def forward(self, x, targets=None):
         """
         :param x: input images tensor, shape = (b, c, h, w)
         :return:
             output: output tensor, shape = (times, b, class_nums)
         """
+        if self.training and targets is None:
+            raise ValueError("pass \'targets\' for training mode")
+
+        elif not self.training and targets is not None:
+            logging.warning("forward as eval mode, but passed \'targets\'")
+
+
+        batch_num = x.shape[0]
 
         for name, layer in self.conv_layers.items():
             x = layer(x)
@@ -56,6 +76,14 @@ class CRNN(ImageRecognitionBase):
 
         if self.training:
             # apply log softmax for ctc loss
-            return F.log_softmax(x, dim=2)
+            predicts = F.log_softmax(x, dim=2)
+            targets, target_lengths = self.encoder(targets)
+            predict_lengths = torch.LongTensor([x.shape[0]] * batch_num)
+
+            return predicts, targets, predict_lengths, target_lengths
+
         else:
-            return F.softmax(x, dim=2)
+            predicts = F.softmax(x, dim=2)
+            texts = self.decoder(predicts)
+            return predicts, texts
+
