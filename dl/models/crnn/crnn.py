@@ -76,7 +76,7 @@ class CRNN(ObjectRecognitionModelBase):
             x = layer(x)
 
         if self.training:
-            # apply log softmax for ctc loss
+            # apply log softmax for ctc loss, shape = (times, b, class_labels)
             predicts = F.log_softmax(x, dim=2)
             targets, target_lengths = self.encoder(targets)
             predict_lengths = torch.LongTensor([x.shape[0]] * batch_num)
@@ -84,9 +84,10 @@ class CRNN(ObjectRecognitionModelBase):
             return predicts, targets, predict_lengths, target_lengths
 
         else:
+            # apply softmax for prediction, shape = (times, b, class_labels)
             predicts = F.softmax(x, dim=2)
-            texts = self.decoder(predicts)
-            return predicts, texts
+            raw_texts, out_texts = self.decoder(predicts)
+            return predicts, raw_texts, out_texts
 
 
     def infer(self, image, toNorm=False):
@@ -94,9 +95,9 @@ class CRNN(ObjectRecognitionModelBase):
             raise NotImplementedError("call \'eval()\' first")
 
         # img: Tensor, shape = (b, c, h, w)
-        img = _check_image(image, self.device)
+        img, orig_imgs = _check_image(image, self.device, size=(self.input_width, self.input_height))
 
         # normed_img, orig_img: Tensor, shape = (b, c, h, w)
-        normed_imgs, orig_imgs = _get_normed_and_origin_img(img, (0.5,), (0.5,), toNorm, self.device)
+        normed_imgs, orig_imgs = _get_normed_and_origin_img(img, orig_imgs, (0.5,), (0.5,), toNorm, self.device)
 
-        self(normed_imgs)
+        return self(normed_imgs)

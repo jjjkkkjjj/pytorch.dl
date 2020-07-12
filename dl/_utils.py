@@ -113,7 +113,7 @@ def _check_image(image, device, size=None):
         #### check cvimg ####
         assert isinstance(_cim, np.ndarray)
         if _cim.ndim == 2:
-            cim = np.broadcast_to(_cim, (_cim.shape[0], _cim.shape[1], 3)).copy()
+            cim = np.broadcast_to(np.expand_dims(_cim, 2), (_cim.shape[0], _cim.shape[1], 3)).copy()
         elif _cim.ndim == 3:
             cim = _cim
         else:

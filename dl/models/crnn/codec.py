@@ -1,4 +1,4 @@
-import torch
+import torch, re
 from torch.nn.utils.rnn import pad_sequence
 
 from ..utils.codec import CodecBase
@@ -33,8 +33,28 @@ class CTCCodec(CodecBase):
         """
         :param predicts: Tensor, shape = (times, b, class_nums)
         :return:
+            raw_strings: list of str, raw strings
+            decoded_strings: list of str, decoded strings
         """
         _, inds = predicts.max(dim=2)
-        # shape = (b, times)
-        inds = inds.permute((1, 0)).contiguous().cpu().numpy()
+        # inds' shape = (b, times)
+        inds = inds.permute((1, 0)).contiguous().cpu().tolist()
+        batch_num = len(inds)
 
+        raw_strings = []
+        decoded_strings = []
+        for b in range(batch_num):
+            # convert raw string
+            raw = ''.join(self.class_labels[ind] for ind in inds[b])
+            # re.sub(r'(.)\1{1,}', r'\1', 'bbb---bbas00aacc')
+            # b-bas0ac
+
+            # gather multiple characters
+            decoded = re.sub(r'(.)\1{1,}', r'\1', raw)
+            # remove blank
+            decoded = str(decoded).replace('-', '')
+
+            raw_strings += [raw]
+            decoded_strings += [decoded]
+
+        return raw_strings, decoded_strings
