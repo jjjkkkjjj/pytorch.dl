@@ -1,13 +1,15 @@
 from torchvision.models.utils import load_state_dict_from_url
 import logging, os
 
-from ..._utils import _check_ins, _check_norm
+from ..._utils import (
+    _check_ins, _check_norm, _initialize_xavier_uniform,
+    _check_image, _get_normed_and_origin_img, _get_model_url
+)
 from .core.boxes.codec import *
 from .core.boxes.dbox import *
 from .core.predict import *
 from ..layers import *
 from .core.inference import *
-from ..vgg.base import get_model_url
 from ..base import ObjectDetectionModelBase
 from ...data.utils.converter import toVisualizeRectLabelRGBimg
 
@@ -284,6 +286,8 @@ class SSDBase(ObjectDetectionModelBase):
 
     def infer(self, image, conf_threshold=None, toNorm=False, visualize=False):
         """
+        Caution: this function use function checking image type which is slightly slow compared to __call__
+                 if the performance is important for you, call __call__ directly
         :param image: ndarray or Tensor of list or tuple, or ndarray, or Tensor. Note that each type will be handled as;
             ndarray of list or tuple, ndarray: (?, h, w, c). channel order will be handled as RGB
             Tensor of list or tuple, Tensor: (?, c, h, w). channel order will be handled as RGB
@@ -305,10 +309,10 @@ class SSDBase(ObjectDetectionModelBase):
             raise NotImplementedError("call \'eval()\' first")
 
         # img: Tensor, shape = (b, c, h, w)
-        img = check_image(image, self.device)
+        img, orig_imgs = _check_image(image, self.device, size=(self.input_width, self.input_height))
 
         # normed_img, orig_img: Tensor, shape = (b, c, h, w)
-        normed_imgs, orig_imgs = get_normed_and_origin_img(img, self.rgb_means, self.rgb_stds, toNorm, self.device)
+        normed_imgs, orig_imgs = _get_normed_and_origin_img(img, orig_imgs, self.rgb_means, self.rgb_stds, toNorm, self.device)
 
         if list(img.shape[1:]) != [self.input_channel, self.input_height, self.input_width]:
             raise ValueError('image shape was not same as input shape: {}, but got {}'.format([self.input_channel, self.input_height, self.input_width], list(img.shape[1:])))
@@ -327,7 +331,7 @@ class SSDBase(ObjectDetectionModelBase):
 
             img_num = normed_imgs.shape[0]
             if visualize:
-                visualized_imgs = [toVisualizeRectLabelRGBimg(orig_imgs[i], locs=infers[i][:, 2:], inf_labels=infers[i][:, 0],
+                visualized_imgs = [toVisualizeRectLabelRGBimg(orig_imgs[i], locs=infers[i][:, 2:], inf_labels=infers[i][:, 0], tensor2cvimg=False,
                                                               inf_confs=infers[i][:, 1], classe_labels=self.class_labels, verbose=False) for i in range(img_num)]
                 return infers, visualized_imgs, orig_imgs
             else:
@@ -431,7 +435,7 @@ def load_vgg_weights(model, name):
     #model_dir = weights_path(__file__, _root_num=2, dirname='weights')
     model_dir = os.path.join(os.path.expanduser("~"), 'weights')
 
-    model_url = get_model_url(name)
+    model_url = _get_model_url(name)
     pretrained_state_dict = load_state_dict_from_url(model_url, model_dir=model_dir)
     #pretrained_state_dict = torch.load('/home/kado/Desktop/program/machile-learning/dl.pytorch/weights/vgg16_reducedfc.pth')
     model_state_dict = model.state_dict()
@@ -460,80 +464,3 @@ def load_vgg_weights(model, name):
     logging.info("model loaded")
 
 
-def _initialize_xavier_uniform(layers):
-    for module in layers.modules():
-        if isinstance(module, nn.Conv2d):
-            nn.init.xavier_uniform_(module.weight)
-            if module.bias is not None:
-                nn.init.constant_(module.bias, 0)
-        elif isinstance(module, ConvRelu):
-            nn.init.xavier_uniform_(module.conv.weight)
-            if module.conv.bias is not None:
-                nn.init.constant_(module.conv.bias, 0)
-
-def check_image(image, device):
-    """
-    :param image: ndarray or Tensor of list or tuple, or ndarray, or Tensor. Note that each type will be handled as;
-            ndarray of list or tuple, ndarray: (?, h, w, c). channel order will be handled as RGB
-            Tensor of list or tuple, Tensor: (?, c, h, w). channel order will be handled as RGB
-    :param device: torch.device
-    :return:
-        img: Tensor, shape = (b, c, h, w)
-    """
-    if isinstance(image, (list, tuple)):
-        img = []
-        for im in image:
-            if isinstance(im, np.ndarray):
-                im = torch.tensor(im, requires_grad=False)
-                img += [im.permute((2, 0, 1))]
-            elif isinstance(im, torch.Tensor):
-                img += [im]
-            else:
-                raise ValueError('Invalid image type. list or tuple\'s element must be ndarray or Tensor, but got \'{}\''.format(im.__name__))
-
-        img = torch.stack(img)
-    elif isinstance(image, np.ndarray):
-        img = torch.tensor(image, requires_grad=False)
-        if img.ndim == 3:
-            img = img.permute((2, 0, 1))
-        elif img.ndim == 4:
-            img = img.permute((0, 3, 1, 2))
-
-    elif isinstance(image, torch.Tensor):
-        img = image
-    else:
-        raise ValueError('Invalid image type. list or tuple\'s element must be'
-                         '\'list\', \'tuple\', \'ndarray\' or \'Tensor\', but got \'{}\''.format(image.__name__))
-
-    if img.ndim == 3:
-        img = img.unsqueeze(0)  # shape = (1, ?, ?, ?)
-
-    return img.to(device)
-
-def get_normed_and_origin_img(img, rgb_means, rgb_stds, toNorm, device):
-    """
-    :param img: Tensor, shape = (b, c, h, w)
-    :param rgb_means: tuple or float
-    :param rgb_stds: tuple or float
-    :param toNorm: Bool
-    :param device: torch.device
-    :return:
-        normed_img: Tensor, shape = (b, c, h, w)
-        orig_img: Tensor, shape = (b, c, h, w). Order is rgb
-    """
-    rgb_means = _check_norm('rgb_means', rgb_means)
-    rgb_stds = _check_norm('rgb_stds', rgb_stds)
-
-    img = img.to(device)
-
-    # shape = (1, 3, 1, 1)
-    rgb_means = rgb_means.unsqueeze(0).unsqueeze(-1).unsqueeze(-1).to(device)
-    rgb_stds = rgb_stds.unsqueeze(0).unsqueeze(-1).unsqueeze(-1).to(device)
-    if toNorm:
-        normed_img = (img / 255. - rgb_means) / rgb_stds
-        orig_img = img / 255. # divide 255. for tensor2cvrgbimg
-    else:
-        normed_img = img
-        orig_img = img * rgb_stds + rgb_means
-
-    return normed_img, orig_img

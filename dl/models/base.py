@@ -57,10 +57,9 @@ class ImageRecognitionBase(ModelBase):
         pass
 
     # @abc.abstractmethod
-    def infer(self, image, visualize=False, **kwargs):
+    def infer(self, image, **kwargs):
         """
         :param image:
-        :param visualize:
         :param kwargs:
         :return:
             infers: Tensor, shape = (box_num, 5=(conf, cx, cy, w, h))

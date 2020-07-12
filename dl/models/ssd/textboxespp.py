@@ -128,10 +128,10 @@ class TextBoxesPP(SSDvggBase):
         infers, orig_imgs = super().infer(image, conf_threshold, toNorm, visualize=False)
 
         if visualize:
-            img_num = orig_imgs.shape[0]
+            img_num = len(orig_imgs)
 
             visualized_imgs = [toVisualizeQuadsLabelRGBimg(orig_imgs[i], poly_pts=infers[i][:, 6:], inf_labels=infers[i][:, 0],
-                                                           inf_confs=infers[i][:, 1], classe_labels=self.class_labels,
+                                                           inf_confs=infers[i][:, 1], classe_labels=self.class_labels, tensor2cvimg=False,
                                                            verbose=False) for i in range(img_num)]
 
             return infers, visualized_imgs, orig_imgs

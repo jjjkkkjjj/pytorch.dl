@@ -1,6 +1,7 @@
 from ..layers import *
 from ..base import ObjectRecognitionModelBase
 from .codec import CTCCodec
+from ..._utils import _check_image, _get_normed_and_origin_img
 
 import string, logging
 from torch.nn import functional as F
@@ -87,3 +88,15 @@ class CRNN(ObjectRecognitionModelBase):
             texts = self.decoder(predicts)
             return predicts, texts
 
+
+    def infer(self, image, toNorm=False):
+        if self.training:
+            raise NotImplementedError("call \'eval()\' first")
+
+        # img: Tensor, shape = (b, c, h, w)
+        img = _check_image(image, self.device)
+
+        # normed_img, orig_img: Tensor, shape = (b, c, h, w)
+        normed_imgs, orig_imgs = _get_normed_and_origin_img(img, (0.5,), (0.5,), toNorm, self.device)
+
+        self(normed_imgs)

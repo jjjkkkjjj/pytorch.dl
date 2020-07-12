@@ -3,6 +3,7 @@ from torch import nn
 from torchvision.models.utils import load_state_dict_from_url
 from ..layers import Flatten
 from ..base import ModelBase
+from ..._utils import _get_model_url
 from collections import OrderedDict
 
 
@@ -48,7 +49,7 @@ class VGGBase(ModelBase):
 
     def load_weights(self, path=None):
         if path is None:
-            model_url = get_model_url(self.model_name)
+            model_url = _get_model_url(self.model_name)
 
             model_dir = './weights'
             pretrained_state_dict = load_state_dict_from_url(model_url, model_dir=model_dir)
@@ -77,17 +78,3 @@ class VGGBase(ModelBase):
         x = self.flatten(x)
         return self.classifier_layers(x)
 
-
-def get_model_url(name):
-    model_urls = {
-        'vgg11': 'https://download.pytorch.org/models/vgg11-bbd30ac9.pth',
-        'vgg13': 'https://download.pytorch.org/models/vgg13-c768596a.pth',
-        'vgg16': 'https://download.pytorch.org/models/vgg16-397923af.pth',
-        'vgg19': 'https://download.pytorch.org/models/vgg19-dcbb9e9d.pth',
-        'vgg11_bn': 'https://download.pytorch.org/models/vgg11_bn-6002323d.pth',
-        'vgg13_bn': 'https://download.pytorch.org/models/vgg13_bn-abd245e5.pth',
-        'vgg16_bn': 'https://download.pytorch.org/models/vgg16_bn-6c64b313.pth',
-        'vgg19_bn': 'https://download.pytorch.org/models/vgg19_bn-c79401a0.pth',
-    }
-
-    return model_urls[name]

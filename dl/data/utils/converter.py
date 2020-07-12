@@ -143,7 +143,7 @@ def toVisualizeRectLabelRGBimg(img, locs, inf_labels, classe_labels, inf_confs=N
 
     return img
 
-def toVisualizeQuadsRGBimg(img, poly_pts, thickness=2, rgb=(255, 0, 0), verbose=False):
+def toVisualizeQuadsRGBimg(img, poly_pts, thickness=2, rgb=(255, 0, 0), verbose=False, tensor2cvimg=True):
     """
     :param img: Tensor, shape = (c, h, w)
     :param poly_pts: list of Tensor, centered coordinates, shape = (box num, ?*2=(x1, y1, x2, y2,...)).
@@ -153,8 +153,13 @@ def toVisualizeQuadsRGBimg(img, poly_pts, thickness=2, rgb=(255, 0, 0), verbose=
     :return:
         img: RGB order
     """
-    # convert (c, h, w) to (h, w, c)
-    img = tensor2cvrgbimg(img, to8bit=True).copy()
+    if tensor2cvimg:
+        img = tensor2cvrgbimg(img)
+    else:
+        if not isinstance(img, np.ndarray):
+            raise ValueError('img must be Tensor, but got {}. if you pass \'Tensor\' img, set tensor2cvimg=True'.format(
+                type(img).__name__))
+
     #cv2.imshow('a', img)
     #cv2.waitKey()
     # print(locs)

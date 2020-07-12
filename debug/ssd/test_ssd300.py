@@ -2,7 +2,7 @@ from dl.data.objdetn import datasets, utils, target_transforms
 from dl.data import transforms
 
 from dl.models.ssd.ssd300 import SSD300
-from dl.models.ssd.core import toVisualizeRGBImg
+from dl.data.utils.converter import toVisualizeRectLabelRGBimg
 from torch.utils.data import DataLoader
 import cv2
 
@@ -37,13 +37,10 @@ if __name__ == '__main__':
     #evaluator = VOC2007Evaluator(test_loader, iteration_interval=5000)
     #ap = evaluator(model)
     #print(ap)
-
     image = cv2.cvtColor(cv2.imread('../../scripts/ssd/assets/coco_testimg.jpg'), cv2.COLOR_BGR2RGB)
-    infers, imgs, orig_imgs = model.infer(cv2.resize(image, (300, 300)), visualize=True, toNorm=True)
+    infers, imgs, orig_imgs = model.infer(image, visualize=True, toNorm=True)
     for i, img in enumerate(imgs):
-        image = toVisualizeRGBImg(image, locs=infers[i][:, 2:], inf_labels=infers[i][:, 0], inf_confs=infers[i][:, 1],
-                                  tensor2cvimg=False, classe_labels=model.class_labels, verbose=False)
-        cv2.imshow('result', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+        cv2.imshow('result', cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
         cv2.waitKey()
 
     images = [test_dataset[i][0] for i in range(20)]
