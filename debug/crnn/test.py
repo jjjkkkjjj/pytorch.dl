@@ -10,8 +10,9 @@ if __name__ == '__main__':
     print(model)
 
     image = cv2.cvtColor(cv2.imread('../../scripts/crnn/assets/test.jpg'), cv2.COLOR_BGR2GRAY)
-    cv2.imshow('test image', image)
-    cv2.waitKey()
+    image = cv2.cvtColor(cv2.imread('../../scripts/crnn/assets/demo.png'), cv2.COLOR_BGR2GRAY)
+    #cv2.imshow('test image', image)
+    #cv2.waitKey()
     _, raws, outs = model.infer(image, toNorm=True)
     for raw, out in zip(raws, outs):
         print('{} -> {}'.format(raw, out))

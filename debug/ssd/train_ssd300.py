@@ -28,7 +28,7 @@ if __name__ == '__main__':
          target_transforms.ToTensor()]
     )
 
-    train_dataset = datasets.Compose(datasets=(datasets.VOC2007Dataset, datasets.VOC2012_TrainValDataset),
+    train_dataset = datasets.Compose(datasets=(datasets.VOC2007Dataset,), #datasets.VOC2012_TrainValDataset),
                                      ignore=target_transforms.Ignore(difficult=True), transform=transform, target_transform=target_transform, augmentation=augmentation)
     val_dataset = datasets.VOC2007_TestDataset(ignore=target_transforms.Ignore(difficult=True), transform=transform, target_transform=target_transform)
 
@@ -61,7 +61,12 @@ if __name__ == '__main__':
 
     trainer.train(30, train_loader)
     """
-    save_manager = SaveManager(modelname='ssd300', interval=100, max_checkpoints=3, plot_interval=10)
+    #save_manager = SaveManager(modelname='ssd300', interval=100, max_checkpoints=3, plot_interval=10)
+
+    #trainer = TrainObjectDetectionConsoleLogger(SSDLoss(), model, optimizer, iter_sheduler)
+    #trainer.train_iter(save_manager, 80000, train_loader)
+
+    save_manager = SaveManager(modelname='ssd300', interval=1, max_checkpoints=3, plot_interval=10)
 
     trainer = TrainObjectDetectionConsoleLogger(SSDLoss(), model, optimizer, iter_sheduler)
-    trainer.train_iter(save_manager, 80000, train_loader)
+    trainer.train_epoch(save_manager, 2, train_loader)

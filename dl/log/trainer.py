@@ -86,7 +86,8 @@ class TrainLoggerBase(object):
         self._x += [x]
 
     def train_epoch(self, savemanager, max_epochs, train_loader, start_epoch=0):
-        max_iterations = max_epochs * len(train_loader.dataset)
+        iter_per_epoch = math.ceil(len(train_loader.dataset) / float(train_loader.batch_size))
+        max_iterations = max_epochs * iter_per_epoch
         start_iteration = start_epoch * len(train_loader.dataset)
 
         self._mode = 'epoch'
@@ -102,7 +103,7 @@ class TrainLoggerBase(object):
         _ = _check_ins('savemanager', savemanager, SaveManager)
 
         iter_per_epoch = math.ceil(len(train_loader.dataset) / float(train_loader.batch_size))
-        max_epochs = math.ceil(max_iterations / float(iter_per_epoch))
+        max_epochs = math.ceil(max_iterations / len(train_loader.dataset))
 
         self._now_epoch = int(start_iteration / len(train_loader.dataset))
         self._now_iteration = start_iteration
@@ -131,7 +132,8 @@ class TrainLoggerBase(object):
 
             self._now_iteration += 1
 
-            percentage = 100. * (self.now_iteration % iter_per_epoch) / iter_per_epoch
+            percent = 100. * (self.now_iteration % iter_per_epoch) / iter_per_epoch
+            percentage = '{:.0f}%[{}/{}]'.format(percent, self.now_iteration % iter_per_epoch, iter_per_epoch)
             self.update_log(self.now_epoch, self.now_iteration, percentage, iter_time, names, losses)
             if self.isIterationMode:
                 if self.now_iteration % savemanager.plot_interval == 0 or \
@@ -142,7 +144,7 @@ class TrainLoggerBase(object):
                 saved_path, removed_path = savemanager.update_iteration(self.model, self.now_iteration, max_iterations)
                 self.update_checkpointslog(saved_path, removed_path)
 
-            if self.now_iteration % len(train_loader.dataset) == 0:
+            if self.now_iteration % iter_per_epoch == 0:
                 self._now_epoch += 1
 
                 if self.isEpochMode:
@@ -173,7 +175,7 @@ class TrainLoggerBase(object):
         :param losses: list of float
         :return:
         """
-        iter_template = '\rTraining... Epoch: {}, Iter: {},\t {:.0f}%\t{}\tIter time: {:.4f}'
+        iter_template = '\rTraining... Epoch: {}, Iter: {},\t {}\t{}\tIter time: {:.4f}'
         loss_template = ''
         for name, loss in zip(names, losses):
             loss_template += '{}: {:.6f} '.format(name, loss)
