@@ -13,12 +13,16 @@ from ..objdetn.target_transforms import (
     OneHot
 )
 from ..objdetn.target_transforms import _IgnoreBase
+from ..txtrecog.target_transforms import Text2Number as _Text2Number
 
-#class Text2Number(object):
-#    def __init__(self):
-#        pass
+class Text2Number(object):
+    def __init__(self, class_labels, blankIndex=None, ignore_nolabel=True):
+        self._text2number = _Text2Number(class_labels, blankIndex, ignore_nolabel)
 
+    def __call__(self, bboxes, labels, flags, quads, texts):
+        texts = self._text2number(texts)
 
+        return (bboxes, labels, flags, quads, texts)
 
 class Ignore(_IgnoreBase):
     supported_key = ['illegible', 'difficult', 'strange']
@@ -82,6 +86,9 @@ class Ignore(_IgnoreBase):
         return (ret_bboxes, ret_labels, ret_flags, ret_quads, ret_texts)
 
 class ToTensor(object):
+    def __init__(self, textTensor=False):
+        self.textTensor = textTensor
+
     def __call__(self, bboxes, labels, flags, quads, texts):
         """
         :param bboxes:
@@ -92,6 +99,7 @@ class ToTensor(object):
             texts
         :return:
         """
+        texts = torch.from_numpy(texts) if self.textTensor else texts
         return (torch.from_numpy(bboxes), torch.from_numpy(labels), flags, torch.from_numpy(quads), texts)
 
 

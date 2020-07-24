@@ -11,14 +11,19 @@ SynthText_class_nums = len(SynthText_class_labels)
 
 SynthText_ROOT = os.path.join(DATA_ROOT, 'text', 'SynthText')
 
+class _FoundNonAlphaNumeric(Exception):
+    pass
+
 class SynthTextDetectionSingleDatasetBase(TextDetectionDatasetBase):
-    def __init__(self, synthtext_dir, ignore=None, transform=None, target_transform=None, augmentation=None):
+    def __init__(self, synthtext_dir, ignore=None, transform=None, target_transform=None, augmentation=None,
+                 onlyAlphaNumeric=False):
         """
         :param synthtext_dir: str, synthtext directory path above 'Annotations' and 'SynthText'
         :param ignore: target_transforms.Ignore
         :param transform: instance of transforms
         :param target_transform: instance of target_transforms
         :param augmentation:  instance of augmentations
+        :param onlyAlphaNumeric: bool, whether to return img with words containing non-alphanumeric
         """
         super().__init__(ignore=ignore, transform=transform, target_transform=target_transform,
                          augmentation=augmentation)
@@ -30,7 +35,7 @@ class SynthTextDetectionSingleDatasetBase(TextDetectionDatasetBase):
             raise FileNotFoundError('{} was not found'.format(os.path.join(self._synthtext_dir, 'Annotations')))
 
         self._annopaths = [str(path.absolute()) for path in Path(os.path.join(self._synthtext_dir, 'Annotations')).rglob('*.xml')]
-
+        self._onlyAlphaNumeric = onlyAlphaNumeric
 
     def _jpgpath(self, dirname, filename):
         """
@@ -48,6 +53,19 @@ class SynthTextDetectionSingleDatasetBase(TextDetectionDatasetBase):
     @property
     def class_labels(self):
         return self._class_labels
+
+    def __getitem__(self, index):
+        start = time.time()
+        ind = index
+        while True:
+            try:
+                return super().__getitem__(ind)
+            except _FoundNonAlphaNumeric:
+                ind = np.random.randint(0, len(self))
+                if time.time() - start > 10:
+                    logging.warning('10s passed...\nMany non-alphanumeric words may exist.')
+                    start = time.time()
+                pass
 
     def _get_image(self, index):
         """
@@ -90,7 +108,10 @@ class SynthTextDetectionSingleDatasetBase(TextDetectionDatasetBase):
                           _get_xml_et_value(bndbox, 'x3', float), _get_xml_et_value(bndbox, 'y3', float),
                           _get_xml_et_value(bndbox, 'x4', float), _get_xml_et_value(bndbox, 'y4', float)])
 
-            texts.append(_get_xml_et_value(obj, 'name', str))
+            text = _get_xml_et_value(obj, 'name', str)
+            if self._onlyAlphaNumeric and not text.isalnum():
+                raise _FoundNonAlphaNumeric()
+            texts.append(text)
 
             flags.append({'difficult': _get_xml_et_value(obj, 'difficult', int) == 1})
 

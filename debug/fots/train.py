@@ -1,4 +1,4 @@
-from dl.data.objdetn import datasets, utils, target_transforms, augmentations
+from dl.data.txtdetn import datasets, utils, target_transforms, augmentations
 from dl.data import transforms
 from dl.models.fots import FOTS
 
@@ -18,19 +18,20 @@ if __name__ == '__main__':
     #augmentation = augmentations.AugmentationOriginal()
     augmentation = None
 
+    ignore = target_transforms.Ignore(strange=True)
+
     transform = transforms.Compose(
         [transforms.Resize((300, 300)),
          transforms.ToTensor(),
          transforms.Normalize(rgb_means=(0.485, 0.456, 0.406), rgb_stds=(0.229, 0.224, 0.225))]
     )
     target_transform = target_transforms.Compose(
-        [target_transforms.Corners2Centroids(),
-         target_transforms.OneHot(class_nums=datasets.VOC_class_nums, add_background=True),
+        [target_transforms.Text2Number(class_labels=datasets.ALPHANUMERIC_WITH_BLANK_LABELS),
          target_transforms.ToTensor()]
     )
 
-    train_dataset = datasets.Compose(datasets=(datasets.VOC2007Dataset,), #datasets.VOC2012_TrainValDataset),
-                                     ignore=target_transforms.Ignore(difficult=True), transform=transform, target_transform=target_transform, augmentation=augmentation)
+    train_dataset = datasets.SynthTextDetectionDataset(ignore=ignore, transform=transform, target_transform=target_transform, augmentation=augmentation,
+                                                       onlyAlphaNumeric=True)
 
     train_loader = DataLoader(train_dataset,
                               batch_size=4,
@@ -41,8 +42,9 @@ if __name__ == '__main__':
 
     model = FOTS(input_shape=(None, None, 3))
     print(model)
-    import torch
-    model(torch.rand((32, 3, 320, 450)))
+    train_iter = iter(train_loader)
+    img, targets = next(train_iter)
+    model(img, targets)
     """
     optimizer = SGD(model.parameters(), lr=1e-3, momentum=0.9, weight_decay=5e-4)
     iter_sheduler = IterStepLR(optimizer, step_size=60000, gamma=0.1, verbose=True)

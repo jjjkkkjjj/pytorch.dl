@@ -2,15 +2,16 @@ import torch
 from torch import nn
 from torchvision import models
 from torch.nn import functional as F
+import math
 
 from ..layers import Conv2d
 
 class SharedConv(nn.Module):
-    def __init__(self):
+    def __init__(self, out_channels):
         super().__init__()
+        self.out_chennels = out_channels
 
         resnet50 = models.resnet50(pretrained=True, progress=True)
-        print(resnet50)
         self.conv1 = nn.Sequential(
             resnet50.conv1, resnet50.bn1, resnet50.relu
         )
@@ -27,13 +28,13 @@ class SharedConv(nn.Module):
         self.deconv_res2 = Deconv(512 + 256, 256 + 128, shared_channels=256)
 
         self.convlast = nn.Sequential(
-            *Conv2d.relu_one('1', 256 + 128, 64, kernel_size=(3, 3), padding=1, batch_norm=True, sequential=True)
+            *Conv2d.relu_one('1', 256 + 128, out_channels, kernel_size=(3, 3), padding=1, batch_norm=True, sequential=True)
         )
 
     def forward(self, x):
         """
         :param x: input img Tensor, shape = (b, c, h, w)
-        :return:
+        :return: fmaps: output feature maps Tensor, shape = (b, out_channels, h/4, w/4)
         """
         x = self.conv1(x)
         x = self.pool1(x)
@@ -59,10 +60,10 @@ class SharedConv(nn.Module):
         # shape = (b, 256 + 128, h/4, w/4)
         x = self.deconv_res2(x, shared_via_res2)
 
-        # shape = (b, 64, h/4, w/4)
-        outputs = self.convlast(x)
+        # shape = (b, out_channels, h/4, w/4)
+        fmaps = self.convlast(x)
 
-        return outputs
+        return fmaps
 
 class Deconv(nn.Module):
     def __init__(self, in_channels, out_channels, shared_channels):
@@ -84,3 +85,33 @@ class Deconv(nn.Module):
         x = F.interpolate(x, size=(h, w), mode='bilinear', align_corners=True)
 
         return torch.cat((x, shared_x), dim=1)
+
+class Detector(nn.Module):
+    def __init__(self, in_channels, dist_scale=512):
+        super().__init__()
+        self.in_channels = in_channels
+        self.dist_scale = dist_scale
+
+        self.conf_layer = nn.Conv2d(in_channels, 1, kernel_size=(1, 1))
+        self.distances_layer = nn.Conv2d(in_channels, 4, kernel_size=(1, 1))
+        self.angle_layer = nn.Conv2d(in_channels, 1, kernel_size=(1, 1))
+
+    def forward(self, features):
+        """
+        :param features: feature Tensor from shared conv, shape = (b, in_channels, h/4, w/4)
+        :return:
+            conf: confidence Tensor, shape = (b, h, w)
+            distances: distances Tensor, shape = (b, h, w, 4=(t, l, b, r)) for each pixel to target rectangle boundaries
+            angle: angle Tensor, shape = (b, h, w)
+        """
+        conf = self.conf_layer(features)
+        conf = F.sigmoid(conf)
+
+        distances = self.distances_layer(features)
+        distances = F.sigmoid(distances) * self.dist_scale
+
+        angle = self.angle_layer(features)
+        # angle range is (-pi/2, pi/2)
+        angle = F.sigmoid(angle) * math.pi / 2
+
+        return conf, distances, angle
