@@ -51,7 +51,7 @@ class ConvRelu(nn.Module):
 
 class Conv2d:
     batch_norm = True
-
+    sequential = False
     @staticmethod
     def block_relumpool(order, block_num, in_channels, out_channels, **kwargs):
         """
@@ -85,6 +85,7 @@ class Conv2d:
         padding = kwargs.pop('conv_padding', 1)
         relu_inplace = kwargs.pop('relu_inplace', True)
         batch_norm = kwargs.pop('batch_norm', Conv2d.batch_norm)
+        sequential = kwargs.pop('sequential', Conv2d.sequential)
 
         in_c = in_channels
         layers = []
@@ -116,7 +117,10 @@ class Conv2d:
             ('pool{}'.format(order), nn.MaxPool2d(kernel_size, stride=stride, ceil_mode=ceil_mode, padding=padding))
         ]
 
-        return layers
+        if not sequential:
+            return layers
+        else:
+            return [layer for name, layer in layers]
 
     @staticmethod
     def block(order, block_num, in_channels, out_channels, **kwargs):
@@ -135,6 +139,7 @@ class Conv2d:
         :return:
         """
         batch_norm = kwargs.pop('batch_norm', Conv2d.batch_norm)
+        sequential = kwargs.pop('sequential', Conv2d.sequential)
 
         if isinstance(out_channels, int):
             out_channels = tuple(out_channels for _ in range(block_num))
@@ -163,34 +168,53 @@ class Conv2d:
                     ('bn{}'.format(postfix), nn.BatchNorm2d(out_c))
                 ]
 
-        return layers
+        if not sequential:
+            return layers
+        else:
+            return [layer for name, layer in layers]
 
     @staticmethod
     def relu_one(postfix, in_channels, out_channels, relu_inplace=True, **kwargs):
         batch_norm = kwargs.pop('batch_norm', Conv2d.batch_norm)
+        sequential = kwargs.pop('sequential', Conv2d.sequential)
+
+        layers = []
         if not batch_norm:
-            return [
+            layers += [
                 ('convRL{}'.format(postfix), ConvRelu(in_channels, out_channels,
                                                       bn=False, relu_inplace=relu_inplace, **kwargs))
             ]
         else:
-            return [
+            layers += [
                 ('convBnRL{}'.format(postfix), ConvRelu(in_channels, out_channels,
                                                       bn=True, relu_inplace=relu_inplace, **kwargs))
             ]
 
+        if not sequential:
+            return layers
+        else:
+            return [layer for name, layer in layers]
+
     @staticmethod
     def one(postfix, in_channels, out_channels, **kwargs):
         batch_norm = kwargs.pop('batch_norm', Conv2d.batch_norm)
+        sequential = kwargs.pop('sequential', Conv2d.sequential)
+
+        layers = []
         if not batch_norm:
-            return [
+            layers += [
                 ('conv{}'.format(postfix), nn.Conv2d(in_channels, out_channels, **kwargs))
             ]
         else:
-            return [
+            layers += [
                 ('conv{}'.format(postfix), nn.Conv2d(in_channels, out_channels, **kwargs)),
                 ('bn{}'.format(postfix), nn.BatchNorm2d(out_channels))
             ]
+
+        if not sequential:
+            return layers
+        else:
+            return [layer for name, layer in layers]
 
 class BidirectionalLSTM(nn.Module):
     def __init__(self, in_size, hidden_size, out_size):
@@ -208,3 +232,14 @@ class BidirectionalLSTM(nn.Module):
         x = x.reshape(T, b, -1)
 
         return x
+
+class Interpolate(nn.Module):
+    def __init__(self, size=None, scale_factor=None, mode='nearest', align_corners=None):
+        super().__init__()
+        self.size = size
+        self.scale_factor = scale_factor
+        self.mode = mode
+        self.align_corners = align_corners
+
+    def forward(self, x):
+        return F.interpolate(x, self.size, self.scale_factor, self.mode, self.align_corners)

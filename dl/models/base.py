@@ -76,6 +76,6 @@ class ObjectDetectionModelBase(ImageRecognitionBase):
     def class_nums_with_background(self):
         return self.class_nums + 1
 
-
-
-
+class TextSpottingModelBase(ImageRecognitionBase):
+    def __init__(self, input_shape):
+        super().__init__(class_labels=('text', 'non-text'), input_shape=input_shape)
