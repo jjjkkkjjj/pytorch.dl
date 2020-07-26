@@ -1,6 +1,7 @@
 from dl.data.txtdetn import datasets, utils, target_transforms, augmentations
 from dl.data import transforms
 from dl.models.fots import FOTS
+from dl.loss.fots import FOTSLoss
 
 from dl.optim.scheduler import IterStepLR
 from dl.log import *
@@ -42,15 +43,16 @@ if __name__ == '__main__':
 
     model = FOTS(chars=datasets.ALPHANUMERIC_WITH_BLANK_LABELS, input_shape=(None, None, 3)).cuda()
     print(model)
+    """
     train_iter = iter(train_loader)
     img, targets, texts = next(train_iter)
+    targets = [t.cuda() for t in targets]
     model(img.cuda(), targets, texts)
     """
     optimizer = SGD(model.parameters(), lr=1e-3, momentum=0.9, weight_decay=5e-4)
     iter_sheduler = IterStepLR(optimizer, step_size=60000, gamma=0.1, verbose=True)
 
-    save_manager = SaveManager(modelname='MK', interval=1, max_checkpoints=3, plot_interval=10)
+    save_manager = SaveManager(modelname='fots', interval=1, max_checkpoints=3, plot_interval=10)
 
-    trainer = TrainObjectDetectionConsoleLogger(SSDLoss(), model, optimizer, iter_sheduler)
+    trainer = TrainObjectDetectionConsoleLogger(FOTSLoss(), model, optimizer, iter_sheduler)
     trainer.train_epoch(save_manager, 2, train_loader)
-    """

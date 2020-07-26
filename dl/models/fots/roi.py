@@ -9,16 +9,19 @@ class RoIRotate(Module):
         super().__init__()
         self.height = height
 
-    def forward(self, fmaps, distances, angle, labels):
+    def forward(self, fmaps, pred_locs, true_locs):
         """
         :param fmaps: feature maps Tensor, shape = (b, c, h/4, w/4)
-        :param distances: distances Tensor, shape = (b, 4=(t, l, b, r), h/4, w/4) for each pixel to target rectangle boundaries
-        :param angle: angle Tensor, shape = (b, 1, h/4, w/4)
-        :param labels: list(b) of Tensor, shape = (text number in image, 4=(rect)+8=(quads)+...)
-        :return: ret_rotated_features: list(b) of Tensor, shape = (text nums, c, height=8, non-fixed width)
+        :param pred_locs: predicted Tensor, shape = (b, h/4, w/4, 5=(conf, t, l, b, r, angle))
+        :param true_locs: list(b) of tensor, shape = (text number, 4=(xmin, ymin, xmax, ymax)+8=(x1, y1,...)+1=angle))
+        :return:
+            ret_rotated_features: list(b) of Tensor, shape = (text nums, c, height=8, non-fixed width)
+            ret_true_angles: list(b) of Tensor, shape = (text nums,)
         """
         device = fmaps.device
         batch_nums, c, h, w = fmaps.shape
+
+        distances, angles = pred_locs[:, 1:5], pred_locs[:, 5:]
 
         ret_rotated_features = []
         for b in range(batch_nums):
@@ -26,7 +29,7 @@ class RoIRotate(Module):
             widths = []
             matrices = []
 
-            bboxes, quads = labels[b][:, :4].cpu().numpy(), labels[b][:, 4:12].cpu().numpy()
+            bboxes, quads = true_locs[b][:, :4].cpu().numpy(), true_locs[b][:, 4:12].cpu().numpy()
             bboxes[:, ::2] *= w
             bboxes[:, 1::2] *= h
             quads[:, ::2] *= w
@@ -52,8 +55,8 @@ class RoIRotate(Module):
 
             images = torch.stack(images) # shape = (text num, c, h/4, w/4)
             matrices = torch.stack(matrices) # shape = (text num, 2, 3)
-            grid = F.affine_grid(matrices, images.size())
-            rotated_features = F.grid_sample(images, grid, mode='bilinear') # shape = (text num, c, h/4, w/4)
+            grid = F.affine_grid(matrices, images.size(), align_corners=True)
+            rotated_features = F.grid_sample(images, grid, mode='bilinear', align_corners=True) # shape = (text num, c, h/4, w/4)
 
             max_width = np.max(widths)
 
@@ -61,7 +64,7 @@ class RoIRotate(Module):
             for t in range(textnums):
                 pad_images[t, :, :self.height, :widths[t]] = rotated_features[t, :, :self.height, :widths[t]]
 
-            ret_rotated_features = [pad_images]
+            ret_rotated_features += [pad_images]
 
         return ret_rotated_features
 

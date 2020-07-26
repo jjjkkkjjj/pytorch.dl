@@ -99,19 +99,23 @@ class Detector(nn.Module):
     def forward(self, features):
         """
         :param features: feature Tensor from shared conv, shape = (b, in_channels, h/4, w/4)
-        :return:
-            conf: confidence Tensor, shape = (b, 1, h/4, w/4)
-            distances: distances Tensor, shape = (b, 4=(t, l, b, r), h/4, w/4) for each pixel to target rectangle boundaries
-            angle: angle Tensor, shape = (b, 1, h/4, w/4)
+        :returns:
+            pred_confs: confidence Tensor, shape = (b, h/4, w/4, 1)
+            pred_locs: predicted Tensor, shape = (b, h/4, w/4, 5=(conf, t, l, b, r, angle))
+                distances: distances Tensor, shape = (b, h/4, w/4, 4=(t, l, b, r)) for each pixel to target rectangle boundaries
+                angle: angle Tensor, shape = (b, h/4, w/4, 1)
         """
+        # shape = (b, 1, h/4, w/4)
         conf = self.conf_layer(features)
         conf = torch.sigmoid(conf)
 
+        # shape = (b, 4=(t, l, b, r), h/4, w/4)
         distances = self.distances_layer(features)
         distances = torch.sigmoid(distances) * self.dist_scale
 
+        # shape = (b, 1, h/4, w/4)
         angle = self.angle_layer(features)
         # angle range is (-pi/2, pi/2)
         angle = torch.sigmoid(angle) * math.pi / 2
 
-        return conf, distances, angle
+        return conf.permute((0, 2, 3, 1)).contiguous(), torch.cat((distances, angle), dim=1).permute((0, 2, 3, 1)).contiguous()
