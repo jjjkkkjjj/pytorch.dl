@@ -20,9 +20,11 @@ class Text2Number(object):
         self._text2number = _Text2Number(class_labels, blankIndex, ignore_nolabel)
 
     def __call__(self, bboxes, labels, flags, quads, texts):
-        texts = self._text2number(texts)
-
-        return (bboxes, labels, flags, quads, texts)
+        ret_texts = []
+        for txt in texts:
+            txt = self._text2number(txt)
+            ret_texts += [np.array(txt)]
+        return (bboxes, labels, flags, quads, ret_texts)
 
 class Ignore(_IgnoreBase):
     supported_key = ['illegible', 'difficult', 'strange']
@@ -99,7 +101,7 @@ class ToTensor(object):
             texts
         :return:
         """
-        texts = torch.from_numpy(texts) if self.textTensor else texts
+        texts = [torch.from_numpy(txt) for txt in texts] if self.textTensor else texts
         return (torch.from_numpy(bboxes), torch.from_numpy(labels), flags, torch.from_numpy(quads), texts)
 
 

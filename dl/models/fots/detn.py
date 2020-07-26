@@ -100,18 +100,18 @@ class Detector(nn.Module):
         """
         :param features: feature Tensor from shared conv, shape = (b, in_channels, h/4, w/4)
         :return:
-            conf: confidence Tensor, shape = (b, h, w)
-            distances: distances Tensor, shape = (b, h, w, 4=(t, l, b, r)) for each pixel to target rectangle boundaries
-            angle: angle Tensor, shape = (b, h, w)
+            conf: confidence Tensor, shape = (b, 1, h/4, w/4)
+            distances: distances Tensor, shape = (b, 4=(t, l, b, r), h/4, w/4) for each pixel to target rectangle boundaries
+            angle: angle Tensor, shape = (b, 1, h/4, w/4)
         """
         conf = self.conf_layer(features)
-        conf = F.sigmoid(conf)
+        conf = torch.sigmoid(conf)
 
         distances = self.distances_layer(features)
-        distances = F.sigmoid(distances) * self.dist_scale
+        distances = torch.sigmoid(distances) * self.dist_scale
 
         angle = self.angle_layer(features)
         # angle range is (-pi/2, pi/2)
-        angle = F.sigmoid(angle) * math.pi / 2
+        angle = torch.sigmoid(angle) * math.pi / 2
 
         return conf, distances, angle

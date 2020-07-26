@@ -21,13 +21,13 @@ if __name__ == '__main__':
     ignore = target_transforms.Ignore(strange=True)
 
     transform = transforms.Compose(
-        [transforms.Resize((300, 300)),
+        [transforms.Resize((600, 800)),
          transforms.ToTensor(),
          transforms.Normalize(rgb_means=(0.485, 0.456, 0.406), rgb_stds=(0.229, 0.224, 0.225))]
     )
     target_transform = target_transforms.Compose(
         [target_transforms.Text2Number(class_labels=datasets.ALPHANUMERIC_WITH_BLANK_LABELS),
-         target_transforms.ToTensor()]
+         target_transforms.ToTensor(textTensor=True)]
     )
 
     train_dataset = datasets.SynthTextDetectionDataset(ignore=ignore, transform=transform, target_transform=target_transform, augmentation=augmentation,
@@ -40,11 +40,11 @@ if __name__ == '__main__':
                               num_workers=4,
                               pin_memory=True)
 
-    model = FOTS(input_shape=(None, None, 3))
+    model = FOTS(input_shape=(None, None, 3)).cuda()
     print(model)
     train_iter = iter(train_loader)
-    img, targets = next(train_iter)
-    model(img, targets)
+    img, targets, texts = next(train_iter)
+    model(img.cuda(), targets, texts)
     """
     optimizer = SGD(model.parameters(), lr=1e-3, momentum=0.9, weight_decay=5e-4)
     iter_sheduler = IterStepLR(optimizer, step_size=60000, gamma=0.1, verbose=True)

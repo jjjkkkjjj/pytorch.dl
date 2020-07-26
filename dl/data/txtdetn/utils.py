@@ -24,4 +24,4 @@ def batch_ind_fn(batch):
     """
     imgs, targets, texts = list(zip(*batch))
 
-    return torch.stack(imgs), (targets, texts)
+    return torch.stack(imgs), targets, texts
