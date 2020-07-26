@@ -40,7 +40,7 @@ if __name__ == '__main__':
                               num_workers=4,
                               pin_memory=True)
 
-    model = FOTS(input_shape=(None, None, 3)).cuda()
+    model = FOTS(chars=datasets.ALPHANUMERIC_WITH_BLANK_LABELS, input_shape=(None, None, 3)).cuda()
     print(model)
     train_iter = iter(train_loader)
     img, targets, texts = next(train_iter)

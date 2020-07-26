@@ -77,5 +77,14 @@ class ObjectDetectionModelBase(ImageRecognitionBase):
         return self.class_nums + 1
 
 class TextSpottingModelBase(ImageRecognitionBase):
-    def __init__(self, input_shape):
+    def __init__(self, chars, input_shape):
         super().__init__(class_labels=('text', 'non-text'), input_shape=input_shape)
+        self._chars = chars
+
+    @property
+    def chars(self):
+        return self._chars
+
+    @property
+    def chars_nums(self):
+        return len(self._chars)

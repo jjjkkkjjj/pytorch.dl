@@ -22,7 +22,7 @@ class Text2Number(object):
     def __call__(self, bboxes, labels, flags, quads, texts):
         ret_texts = []
         for txt in texts:
-            txt = self._text2number(txt)
+            txt, = self._text2number(txt)
             ret_texts += [np.array(txt)]
         return (bboxes, labels, flags, quads, ret_texts)
 
