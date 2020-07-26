@@ -54,5 +54,5 @@ if __name__ == '__main__':
 
     save_manager = SaveManager(modelname='fots', interval=1, max_checkpoints=3, plot_interval=10)
 
-    trainer = TrainObjectDetectionConsoleLogger(FOTSLoss(), model, optimizer, iter_sheduler)
+    trainer = TrainTextSpottingConsoleLogger(FOTSLoss(), model, optimizer, iter_sheduler)
     trainer.train_epoch(save_manager, 2, train_loader)

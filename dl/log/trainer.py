@@ -301,3 +301,46 @@ class TrainObjectDetectionJupyterLogger(TrainJupyterLoggerBase):
 
     def learn(self, images, targets):
         return _learn_objdetn(self, images, targets)
+
+
+from ..models.base import TextSpottingModelBase
+def _learn_txtspotting(self, images, targets, texts):
+    """
+    :param self:
+    :param images: Tensor, shape = (b, c, h, w)
+    :param labels: list(b) of Tensor, shape = (text number in image, 4=(rect)+8=(quads)+...)
+    :param texts: list(b) of list(text number) of Tensor, shape = (characters number,)
+    :return:
+    """
+    images = images.to(self.device)
+    targets = [target.to(self.device) for target in targets]
+    texts = [[t.to(self.device) for t in _txts] for _txts in texts]
+
+    detn, recog = self.model(images, targets, texts)
+
+    confloss, locloss = self.loss_module(detn, recog)
+    loss = confloss + self.loss_module.alpha * locloss
+    loss.backward()
+
+    return ['total', 'loc', 'conf'], [loss.item(), locloss.item(), confloss.item()]
+
+class TrainTextSpottingConsoleLogger(TrainConsoleLoggerBase):
+    model: TextSpottingModelBase
+
+    def __init__(self, loss_module, model, optimizer, scheduler=None):
+        super().__init__(loss_module, model, optimizer, scheduler)
+        _ = _check_ins('model', model, (TextSpottingModelBase, nn.DataParallel))
+
+    def learn(self, images, targets, texts):
+        return _learn_txtspotting(self, images, targets, texts)
+
+class TrainTextSpottingJupyterLogger(TrainJupyterLoggerBase):
+    model: TextSpottingModelBase
+
+    def __init__(self, live_graph, loss_module, model, optimizer, scheduler=None):
+        super().__init__(live_graph, loss_module, model, optimizer, scheduler)
+        _ = _check_ins('model', model, (TextSpottingModelBase, nn.DataParallel))
+
+    def learn(self, images, targets, texts):
+        return _learn_txtspotting(self, images, targets, texts)
+

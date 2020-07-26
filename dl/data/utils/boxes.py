@@ -186,6 +186,34 @@ def corners2centroids(a):
     """
     return torch.cat(((a[:, 2:] + a[:, :2])/2, a[:, 2:] - a[:, :2]), dim=1)
 
+def dists2corners(a):
+    """
+    :param a: dist Tensor, shape = (*, h, w, 4=(t, l, b, r))
+    :return:
+        a: Box Tensor, shape is (*, h, w, 4=(xmin, ymin, xmax, ymax))
+    """
+    assert a.ndim > 3, 'must be greater than 3d'
+    h, w, _ = a.shape[-3:]
+    device = a.device
+    # shape = (*, h, w, 4=(xmin, ymin, xmax, ymax))
+    ret = torch.zeros_like(a, device=device, dtype=torch.float)
+
+    heights, widths = torch.meshgrid(torch.arange(h), torch.arange(w))
+    # shape = (h, w, 1)
+    heights = heights.to(device).unsqueeze(-1)
+    widths = widths.to(device).unsqueeze(-1)
+
+    ret[..., 0] += widths - a[..., 1] # xmin
+    ret[..., 1] += heights - a[..., 0] # ymin
+    ret[..., 2] += widths + a[..., 3] # xmax
+    ret[..., 3] += heights + a[..., 2] # ymax
+
+    ret[..., ::2] = torch.clamp(ret[..., ::2], 0, w)
+    ret[..., 1::2] = torch.clamp(ret[..., 1::2], 0, h)
+
+    return ret
+
+
 def centroids2corners_numpy(a):
     """
     :param a: Box Tensor, shape is (nums, 4=(cx, cy, w, h))

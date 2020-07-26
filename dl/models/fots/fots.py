@@ -26,7 +26,7 @@ class FOTS(TextSpottingModelBase):
             detn:
                 pos_indicator: bool Tensor, shape = (b, h/4, w/4)
                 pred_confs: confidence Tensor, shape = (b, h/4, w/4, 1)
-                pred_locs: predicted Tensor, shape = (b, h/4, w/4, 5=(conf, t, l, b, r, angle))
+                pred_locs: predicted Tensor, shape = (b, h/4, w/4, 5=(t, l, b, r, angle))
                     distances: distances Tensor, shape = (b, h/4, w/4, 4=(t, l, b, r)) for each pixel to target rectangle boundaries
                     angle: angle Tensor, shape = (b, h/4, w/4, 1)
                 true_locs: list(b) of tensor, shape = (text number, 4=(xmin, ymin, xmax, ymax)+8=(x1, y1,...)+1=angle))
