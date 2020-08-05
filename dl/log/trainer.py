@@ -318,11 +318,10 @@ def _learn_txtspotting(self, images, targets, texts):
 
     detn, recog = self.model(images, targets, texts)
 
-    confloss, locloss = self.loss_module(detn, recog)
-    loss = confloss + self.loss_module.alpha * locloss
+    loss, detn_loss, recog_loss = self.loss_module(detn, recog)
     loss.backward()
 
-    return ['total', 'loc', 'conf'], [loss.item(), locloss.item(), confloss.item()]
+    return ['total', 'detection', 'recognition'], [loss.item(), detn_loss.item(), recog_loss.item()]
 
 class TrainTextSpottingConsoleLogger(TrainConsoleLoggerBase):
     model: TextSpottingModelBase

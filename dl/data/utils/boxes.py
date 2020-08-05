@@ -1,4 +1,5 @@
 import torch
+from PIL import Image, ImageDraw
 import numpy as np
 from shapely.geometry import Polygon, MultiPoint, MultiPolygon
 
@@ -200,16 +201,18 @@ def dists2corners(a):
 
     heights, widths = torch.meshgrid(torch.arange(h), torch.arange(w))
     # shape = (h, w, 1)
-    heights = heights.to(device).unsqueeze(-1)
-    widths = widths.to(device).unsqueeze(-1)
+    heights = heights.to(device)
+    widths = widths.to(device)
 
-    ret[..., 0] += widths - a[..., 1] # xmin
-    ret[..., 1] += heights - a[..., 0] # ymin
-    ret[..., 2] += widths + a[..., 3] # xmax
-    ret[..., 3] += heights + a[..., 2] # ymax
+    widths, lefts, rights = torch.broadcast_tensors(widths, a[..., 1], a[..., 3])
+    heights, tops, bottoms = torch.broadcast_tensors(heights, a[..., 0], a[..., 2])
+    xmin = (widths - lefts).unsqueeze(-1) # xmin
+    ymin = (heights - tops).unsqueeze(-1) # ymin
+    xmax = (widths + rights).unsqueeze(-1) # xmax
+    ymax = (heights + bottoms).unsqueeze(-1) # ymax
 
-    ret[..., ::2] = torch.clamp(ret[..., ::2], 0, w)
-    ret[..., 1::2] = torch.clamp(ret[..., 1::2], 0, h)
+    ret[..., ::2] = torch.clamp(torch.cat((xmin, xmax), dim=-1), 0, w)
+    ret[..., 1::2] = torch.clamp(torch.cat((ymin, ymax), dim=-1), 0, h)
 
     return ret
 
@@ -344,3 +347,21 @@ def quads_iou(a, b):
             ret[i, j] = intersectionArea / unionArea
 
     return torch.from_numpy(ret)
+
+
+def poscreator_quads(quad, h, w, device):
+    """
+    :param quad: Tensor, shape = (8=(x1,y1,...))
+    :param h: int
+    :param w: int
+    :param device: device
+    :return: mask_per_rect: Bool Tensor, shape = (h/4, w/4)
+    """
+    _quad = quad.clone() # avoid in-place operation
+    _quad[::2] *= w
+    _quad[1::2] *= h
+
+    img = Image.new('L', (w, h), 0)
+    ImageDraw.Draw(img).polygon(_quad.cpu().numpy(), outline=255, fill=255)
+    # img.show()
+    return torch.from_numpy(np.array(img, dtype=np.bool)).to(device=device)
