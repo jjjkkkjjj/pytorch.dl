@@ -22,7 +22,7 @@ if __name__ == '__main__':
     ignore = target_transforms.Ignore(strange=True)
 
     transform = transforms.Compose(
-        [transforms.Resize((600, 800)),
+        [transforms.Resize((640, 640)),
          transforms.ToTensor(),
          transforms.Normalize(rgb_means=(0.485, 0.456, 0.406), rgb_stds=(0.229, 0.224, 0.225))]
     )
@@ -35,7 +35,7 @@ if __name__ == '__main__':
                                                        onlyAlphaNumeric=True)
 
     train_loader = DataLoader(train_dataset,
-                              batch_size=4,
+                              batch_size=8,
                               shuffle=True,
                               collate_fn=utils.batch_ind_fn,
                               num_workers=4,
@@ -55,4 +55,4 @@ if __name__ == '__main__':
     save_manager = SaveManager(modelname='fots', interval=1, max_checkpoints=3, plot_interval=10)
 
     trainer = TrainTextSpottingConsoleLogger(FOTSLoss(), model, optimizer, iter_sheduler)
-    trainer.train_epoch(save_manager, 2, train_loader)
+    trainer.train_epoch(save_manager, 10, train_loader)

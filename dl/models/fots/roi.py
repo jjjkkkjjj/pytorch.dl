@@ -40,13 +40,14 @@ class RoIRotate(Module):
                 xmin, ymin, xmax, ymax = bboxes[t]
 
                 aspect_ratio = (xmax - xmin) / float(ymax - ymin)
-                width = min(int(aspect_ratio * self.height), w)
+                width = np.clip(int(aspect_ratio * self.height), 1, w)
 
                 src = np.float32([[xmin, ymin], [xmin, ymax], [xmax, ymin]])
                 dst = np.float32([[0, 0], [0, self.height], [width, 0]])
 
                 # https://discuss.pytorch.org/t/affine-transformation-matrix-paramters-conversion/19522/17
                 affine_matrix = cv2.getAffineTransform(dst, src)
+
                 theta = _affine2theta(affine_matrix, width, self.height, device)
 
                 images += [fmaps[b]]

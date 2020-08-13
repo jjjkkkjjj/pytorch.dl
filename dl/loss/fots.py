@@ -3,6 +3,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from ..data.utils.boxes import dice, dists2corners, poscreator_quads
+from .utils import ohem
 
 class FOTSLoss(nn.Module):
     def __init__(self, theta_coef=10, reg_coef=1, recog_coef=1, blankIndex=0):
@@ -93,42 +94,40 @@ class ClassificationLoss(nn.Module):
         neg_indicator = torch.logical_not(pos_indicator)
         loss = torch.zeros((batch_nums,), dtype=torch.float, device=pos_indicator.device)
         for b in range(batch_nums):
-            sample_nums = 0
-
             # shape = (pos num, 1)
             pos_confs = pred_confs[b][pos_indicator[b]]
             pos_loss = F.binary_cross_entropy(pos_confs, torch.ones_like(pos_confs), reduction='sum')
 
-            # online hard example mining
-            # hard negative
+            # shape = (neg num, 1)
             neg_confs = pred_confs[b][neg_indicator[b]]
-            _, indices = torch.sort(neg_confs, dim=0, descending=True)
-            hardn_confs = neg_confs[indices[:self.hard_neg_num]]
+            # online hard example mining
+            hard_neg_indices, rand_neg_indices, sample_nums = ohem(neg_confs, hard_sample_nums=self.hard_neg_num,
+                                                                   random_sample_nums=self.random_neg_num)
+            # hard negative
+            hardn_confs = neg_confs[hard_neg_indices]
             hardn_loss = F.binary_cross_entropy(hardn_confs, torch.zeros_like(hardn_confs), reduction='sum')
 
             # avoid in-place
             #loss[b] = loss[b] + pos_loss + hardn_loss
-            sample_nums += pos_confs.numel() + hardn_confs.numel()
-            # random negative
-            indices = indices[self.hard_neg_num:]
-            if indices.numel() > 0:
-                randindices = torch.randperm(indices.numel()).unsqueeze(-1)
-                indices = indices[randindices]
-                hardnrand_confs = neg_confs[indices[:self.random_neg_num]]
+            if rand_neg_indices.numel() > 0:
+                # random negative
+                hardnrand_confs = neg_confs[rand_neg_indices]
                 hardnrand_loss = F.binary_cross_entropy(hardnrand_confs, torch.zeros_like(hardnrand_confs), reduction='sum')
 
-                loss[b] = pos_loss + hardn_loss + hardnrand_loss
-                sample_nums += hardn_confs.numel()
+                loss[b] = (pos_loss + hardn_loss + hardnrand_loss) / sample_nums
+
             else:
                 loss[b] = (pos_loss + hardn_loss) / sample_nums
 
         return loss
 
 class RegressionLoss(nn.Module):
-    def __init__(self, theta_coef=10):
+    def __init__(self, theta_coef=10, hard_pos_num=128, random_pos_num=128):
         super().__init__()
 
         self.theta_coef = theta_coef
+        self.hard_pos_num = hard_pos_num
+        self.random_pos_num = random_pos_num
 
     def forward(self, pos_indicator, pred_confs, pred_boxes, true_rects, pred_thetas, true_thetas):
         """
@@ -141,7 +140,7 @@ class RegressionLoss(nn.Module):
         :param pred_confs: confidence Tensor, shape = (b, h/4, w/4, 1)
         :param pred_boxes: predicted boxes Tensor, shape = (b, h/4, w/4, 4=(xmin, ymin, xmax, ymax))
         :param true_rects: true boxes list(b) of Tensor, shape = (text numbers, 4=(xmin, ymin, xmax, ymax)+8=(x1, y1,...))
-        :param pred_thetas: predicted angles Tensor, shape = (b, h/4, w/4, 1)
+        :param pred_thetas: predicted angles Tensor, shape = (b, h/4, w/4, 1). range = (-pi/2, pi/2). unit is radian.
         :param true_thetas: true angle list(b) of Tensor, shape = (text numbers, 1)
         :return: loss: loss Tensor, shape = (b,)
         """
@@ -153,16 +152,19 @@ class RegressionLoss(nn.Module):
             batch_nums, h, w, _ = pred_boxes.shape
             loss = torch.zeros((batch_nums,), dtype=torch.float, device=device)
             for b in range(batch_nums):
-                sample_nums = 0
                 text_nums = true_rects[b].shape[0]
 
-                loc_loss = torch.zeros((text_nums,), dtype=torch.float, device=device)
-                orient_loss = torch.zeros((text_nums,), dtype=torch.float, device=device)
+                loc_loss = []
+                orient_loss = []
+                pos_confs = []
 
                 for t in range(text_nums):
                     t_quad = true_rects[b][t, 4:12]  # shape=(8,)
                     t_box = true_rects[b][t, :4].unsqueeze(0)  # shape=(1,4) unsqueeze means for broadcast
                     t_thetas = true_thetas[b][t, :].unsqueeze(0)  # shape=(1,1) unsqueeze means for broadcast
+
+                    # convert percentage representation into true box coordinates
+                    t_box = torch.cat((t_box[:, 0:1]*w, t_box[:, 1:2]*h, t_box[:, 2:3]*w, t_box[:, 3:4]*h), dim=-1)
                     """
                     mask = torch.zeros((batch_nums, h, w, 1), dtype=torch.bool, device=device)
 
@@ -174,16 +176,40 @@ class RegressionLoss(nn.Module):
                     p_thetas = pred_thetas.masked_select(mask).reshape(-1, 1)  # shape=(masked number, 1)
                     """
                     mask = poscreator_quads(t_quad, h, w, device)
-                    p_boxes = pred_boxes[b][mask]
-                    p_thetas = pred_thetas[b][mask]
+                    p_boxes = pred_boxes[b][mask] # shape=(masked number, 4)
+                    p_thetas = pred_thetas[b][mask] # shape=(masked number, 1)
+                    p_confs = pred_confs[b][mask] # shape = (masked number, 1)
 
                     # calculate loss for each true text box
-                    loc_loss[t] = dice(p_boxes, t_box).sum()
-                    orient_loss[t] = F.cosine_similarity(p_thetas, t_thetas, dim=1).sum()
+                    # dice's shape = (masked number, 1)
+                    loc_loss += [dice(p_boxes, t_box)]
+                    # cosine_similarity's shape = (masked number,)
+                    # convert to (masked number, 1)
+                    # p_thetas is between [-pi/2, pi/2]
+                    orient_loss += [1 - torch.cos(p_thetas - t_thetas)]
 
-                    sample_nums += mask.sum().item()
+                    pos_confs += [p_confs]
 
-                loss[b] = (loc_loss.sum() + self.theta_coef * orient_loss.sum()) / sample_nums
+                # convert list into tensor, shape = (pos num, 1)
+                loc_loss = torch.cat(loc_loss, dim=0)
+                orient_loss = torch.cat(orient_loss, dim=0)
+                pos_confs = torch.cat(pos_confs, dim=0)
+
+                # online hard example mining
+                hard_pos_indices, rand_pos_indices, sample_nums = ohem(pos_confs, hard_sample_nums=self.hard_pos_num,
+                                                                       random_sample_nums=self.random_pos_num)
+                hardn_loc_loss = loc_loss[hard_pos_indices]
+                hardn_orient_loss = orient_loss[hard_pos_indices]
+
+                if rand_pos_indices.numel() > 0:
+                    # random positive
+                    hardnrand_loc_loss = loc_loss[rand_pos_indices]
+                    hardnrand_orient_loss = orient_loss[rand_pos_indices]
+                    loss[b] = ((hardn_loc_loss.sum() + hardnrand_loc_loss.sum()) +
+                               self.theta_coef * (hardn_orient_loss.sum() + hardnrand_orient_loss.sum())) / sample_nums
+
+                else:
+                    loss[b] = (hardn_loc_loss.sum() + self.theta_coef * hardn_orient_loss.sum()) / sample_nums
 
             return loss
 

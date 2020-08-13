@@ -21,16 +21,17 @@ def matching_strategy(fmaps, labels):
         t_angles = []
 
         for t in range(label.shape[0]):
-            quads = label[t, 4:12].clone()
+            quads = label[t, 4:12].cpu().numpy()
             quads[::2] *= w
             quads[1::2] *= h
 
             img = Image.new('L', (w, h), 0)
-            ImageDraw.Draw(img).polygon(quads.cpu().numpy(), outline=255, fill=255)
+            ImageDraw.Draw(img).polygon(quads, outline=255, fill=255)
             #img.show()
             mask = np.logical_or(mask, np.array(img, dtype=np.bool))
 
-            _, _, t_angle = cv2.minAreaRect(quads.cpu().numpy().reshape(4, 2).astype(np.float32))
+            # calculate vector and angle
+            t_angle = np.arctan((quads[3] - quads[1])/(max(quads[2] - quads[0], 1)))
             t_angles += [t_angle]
 
         pos_indicator += [mask]
