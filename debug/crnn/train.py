@@ -22,7 +22,7 @@ if __name__ == '__main__':
          # normalize 0.5, 0.5?: https://github.com/pytorch/vision/issues/288
          ]
     )
-    target_transform = target_transforms.Compose(
+    target_transform = target_transforms.Compose(#Blankindexがない．．．．BlankIndexは必須引数にする？
         [target_transforms.Text2Number(class_labels=datasets.ALPHANUMERIC_WITH_BLANK_LABELS),
          target_transforms.ToTensor()
          ]
