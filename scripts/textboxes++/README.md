@@ -2,14 +2,6 @@
 
 The implementation of [TextBoxes++](https://arxiv.org/abs/1801.02765) with PyTorch.
 
-# Requirement
-
-```bash
-pip install --upgrade git+https://github.com/jjjkkkjjj/pytorch_SSD.git
-conda install lxml
-conda install -c conda-forge shapely
-```
-
 # Pre-train
 
 - First, download SynthText dataset from [official](https://www.robots.ox.ac.uk/~vgg/data/scenetext/).
@@ -38,7 +30,7 @@ conda install -c conda-forge shapely
                           encoding
   ```
 
-- Train. See [demo/pre-train-SynthText.ipynb](demo/pre-train-SynthText.ipynb).
+- Train. See [demo/pre-train-SynthText.ipynb](../../demo/pre-train-SynthText.ipynb).
 
 - You can download pre-trained model from [here](https://drive.google.com/file/d/1unqLYGhbORYHHWy7UtZkHA-C-MrN19mf/view?usp=sharing).
 
@@ -57,7 +49,7 @@ conda install -c conda-forge shapely
   └── Images (place .jpg)
   ```
 
-- Train. See [demo/train-ICDAR2015.ipynb](demo/train-ICDAR2015.ipynb).
+- Train. See [demo/train-ICDAR2015.ipynb](../../demo/train-ICDAR2015.ipynb).
 
 - You can download pre-trained model from [here](https://drive.google.com/file/d/1vb7xnqClTy612qay7On1K37ZyAoulxd1/view?usp=sharing).
 
@@ -162,6 +154,31 @@ optional arguments:
                         Loss's alpha
   --neg_factor NEG_FACTOR
                         Negative's factor for hard mining
+```
+
+# Test Script Example
+
+- First create model and load weight
+
+```python
+from dl.models import TextBoxesPP
+import cv2
+
+model = TextBoxesPP(input_shape=(size[0], size[1], 3)).cuda()
+print(model)
+#model.load_weights('./weights/model_icdar15.pth')
+model.load_weights('../../weights/train-all-stage2-batch8_i-24000.pth')
+model.eval()
+```
+
+- Second, infer 
+
+```python
+image = cv2.cvtColor(cv2.imread('assets/test.png'), cv2.COLOR_BGR2RGB)
+infers, imgs, orig_imgs = model.infer(image, visualize=True, toNorm=True)
+for i, img in enumerate(imgs):
+    cv2.imshow('result', cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+    cv2.waitKey()
 ```
 
 

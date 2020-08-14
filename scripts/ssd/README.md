@@ -21,34 +21,6 @@ The implementation of SSD (Single shot detector) in PyTorch.
 - [x] Speed up
 - [x] mAP (I have no confidence...)
 
-# Requirements and Settings
-
-- Anaconda
-
-  ```bash
-  conda install -c anaconda pycurl
-  conda install -c pytorch pytorch
-  conda install -c conda-forge numpy opencv ffmpeg scipy jupyter_contrib_nbextensions jupyter_nbextensions_configurator pycocotools
-  ```
-
-- pip (optional)
-
-  ```bash
-  pip install git+https://github.com/jjjkkkjjj/pytorch_SSD.git
-  ```
-
-  
-
-- Jupyter
-
-  ```bash
-  jupyter notebook
-  ```
-
-  ![nbextensions](https://user-images.githubusercontent.com/16914891/80898698-67145d80-8d41-11ea-92c3-76c3791bdb9f.png)
-
-  
-
 # How to start
 
 ## Get VOC and COCO Dataset
@@ -286,6 +258,7 @@ Note that `None` is available to set these instances
   ```python
   from ssd.models.ssd300 import SSD300
   from ssd_data import datasets
+  import cv2
   
   model = SSD300(class_labels=datasets.VOC_class_labels, batch_norm=False).cuda()
   model.load_weights('./weights/ssd300-voc2007/ssd300-voc2007_i-60000.pth')
