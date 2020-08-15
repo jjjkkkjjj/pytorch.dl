@@ -16,8 +16,8 @@ from ..objdetn.target_transforms import _IgnoreBase
 from ..txtrecog.target_transforms import Text2Number as _Text2Number
 
 class Text2Number(object):
-    def __init__(self, class_labels, blankIndex=None, ignore_nolabel=True):
-        self._text2number = _Text2Number(class_labels, blankIndex, ignore_nolabel)
+    def __init__(self, class_labels, blankIndex=None, ignore_nolabel=True, toLower=True):
+        self._text2number = _Text2Number(class_labels, blankIndex, ignore_nolabel, toLower=toLower)
 
     def __call__(self, bboxes, labels, flags, quads, texts):
         ret_texts = []

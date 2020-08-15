@@ -62,7 +62,7 @@ import cv2
 from dl.data.txtrecog import datasets
 from dl.models import CRNN
 
-model = CRNN(class_labels=datasets.ALPHANUMERIC_WITH_BLANK_LABELS, input_shape=(32, 100, 1)).cuda()
+model = CRNN(class_labels=datasets.Alphanumeric_with_blank_labels, input_shape=(32, 100, 1)).cuda()
 model.eval()
 model.load_weights('../../weights/crnn-synthtext/e-0000007_checkpoints20200814.pth')
 print(model)

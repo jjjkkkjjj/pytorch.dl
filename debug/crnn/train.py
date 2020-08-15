@@ -23,7 +23,7 @@ if __name__ == '__main__':
          ]
     )
     target_transform = target_transforms.Compose(#Blankindexがない．．．．BlankIndexは必須引数にする？
-        [target_transforms.Text2Number(class_labels=datasets.ALPHANUMERIC_WITH_BLANK_LABELS),
+        [target_transforms.Text2Number(class_labels=datasets.Alphanumeric_with_blank_labels),
          target_transforms.ToTensor()
          ]
     )
@@ -41,7 +41,7 @@ if __name__ == '__main__':
     cv2.imshow(''.join(text), img)
     cv2.waitKey()
     """
-    model = CRNN(class_labels=datasets.ALPHANUMERIC_WITH_BLANK_LABELS, input_shape=(32, None, 1)).cuda()
+    model = CRNN(class_labels=datasets.Alphanumeric_with_blank_labels, input_shape=(32, None, 1)).cuda()
     model.train()
     print(model)
     """

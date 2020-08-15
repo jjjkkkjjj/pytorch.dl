@@ -240,7 +240,77 @@ def TextRecogOnlyAlphabetNumberCSVGenerator(basedir, imagedirname='SynthText', s
         writer = csv.writer(f)
         writer.writerows(lines)
 
-def _gtmatRecognizer(generator, basedir, imagedirname='SynthText', **kwargs):
+def get_characters(basedir, imagedirname='SynthText', skip_missing=False):
+
+    class Symbols:
+        def __init__(self):
+            self.symbols = set()
+
+        def update(self, data):
+            self.symbols = self.symbols.union(data)
+
+        def __len__(self):
+            return len(self.symbols)
+
+        def __str__(self):
+            return ''.join(self.symbols)
+
+    symbols = Symbols()
+
+    def csvgenerator(annodir, imagedir, cbb, wBB, imname, txts, symbols, **kwargs):
+        image_num = kwargs.get('image_num')
+        i = kwargs.get('i')
+
+        imgpath = os.path.join(imagedir, imname)
+
+        img = cv2.imread(imgpath)
+        h, w, _ = img.shape
+        if not os.path.exists(imgpath):
+            if not skip_missing:
+                raise FileNotFoundError('{} was not found'.format(imgpath))
+            else:
+                logging.warning('Missing image: {}'.format(imgpath))
+                raise _Skip()
+
+
+        # convert txts to list of str
+        # I don't know why txts is
+        # ['Lines:\nI lost\nKevin ', 'will                ', 'line\nand            ',
+        # 'and\nthe             ', '(and                ', 'the\nout             ',
+        # 'you                 ', "don't\n pkg          "]
+        # there is strange blank and the length of txts is different from the one of wBB
+        txts = ' '.join(txts.tolist()).split()
+        text_num = len(txts)
+
+        if wBB.ndim == 2:
+            # convert shape=(2, 4,) to (2, 4, 1)
+            wBB = np.expand_dims(wBB, 2)
+
+        assert text_num == wBB.shape[2], 'The length of text and wordBB must be same, but got {} and {}'.format(
+            text_num, wBB.shape[2])
+
+        # replace non-alphanumeric characters with *
+        alltexts_asterisk = ''.join([re.sub(r'[^A-Za-z0-9]', '*', text) for text in txts])
+        assert len(alltexts_asterisk) == cbb.shape[
+            2], 'The length of characters and cbb must be same, but got {} and {}'.format(
+            len(alltexts_asterisk), cbb.shape[2])
+        for b in range(text_num):
+            text = txts[b]
+
+            symboltext = re.sub(r'[A-Za-z0-9]+', '', text)
+
+            symbols.update(symboltext)
+
+        sys.stdout.write('\r{}, and number is {}...{:0.1f}% ({}/{})'.format(symbols, len(symbols), 100 * (float(i + 1) / image_num), i + 1, image_num))
+        sys.stdout.flush()
+
+    _gtmatRecognizer(csvgenerator, basedir, imagedirname, customLog=True, symbols=symbols)
+
+    print()
+    print('symbols are {}, and number is {}'.format(symbols, len(symbols)))
+
+
+def _gtmatRecognizer(generator, basedir, imagedirname='SynthText', customLog=False, **kwargs):
     """
         convert gt.mat to https://github.com/MhLiao/TextBoxes_plusplus/blob/master/data/example.xml
 
@@ -324,15 +394,14 @@ def _gtmatRecognizer(generator, basedir, imagedirname='SynthText', **kwargs):
         imname = imname[0]
 
         try:
-            generator(annodir, imagedir, cbb, wBB, imname, txts, **kwargs)
+            generator(annodir, imagedir, cbb, wBB, imname, txts, i=i, image_num=image_num, **kwargs)
         except _Skip:
             pass
 
-        sys.stdout.write('\rGenerating... {:0.1f}% ({}/{})'.format(100 * (float(i + 1) / image_num), i + 1, image_num))
+        if not customLog:
+            sys.stdout.write('\rGenerating... {:0.1f}% ({}/{})'.format(100 * (float(i + 1) / image_num), i + 1, image_num))
         sys.stdout.flush()
+
 
     print()
     logging.info('Finished!!!')
-
-def get_characters():
-    pass

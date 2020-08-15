@@ -27,12 +27,12 @@ if __name__ == '__main__':
          transforms.Normalize(rgb_means=(0.485, 0.456, 0.406), rgb_stds=(0.229, 0.224, 0.225))]
     )
     target_transform = target_transforms.Compose(
-        [target_transforms.Text2Number(class_labels=datasets.ALPHANUMERIC_WITH_BLANK_LABELS),
+        [target_transforms.Text2Number(class_labels=datasets.SynthText_char_labels_without_upper_blank, ignore_nolabel=False),
          target_transforms.ToTensor(textTensor=True)]
     )
 
     train_dataset = datasets.SynthTextDetectionDataset(ignore=ignore, transform=transform, target_transform=target_transform, augmentation=augmentation,
-                                                       onlyAlphaNumeric=True)
+                                                       onlyAlphaNumeric=False)
 
     train_loader = DataLoader(train_dataset,
                               batch_size=8,
@@ -41,7 +41,7 @@ if __name__ == '__main__':
                               num_workers=4,
                               pin_memory=True)
 
-    model = FOTS(chars=datasets.ALPHANUMERIC_WITH_BLANK_LABELS, input_shape=(None, None, 3)).cuda()
+    model = FOTS(chars=datasets.SynthText_char_labels_without_upper_blank, input_shape=(None, None, 3)).cuda()
     print(model)
     """
     train_iter = iter(train_loader)

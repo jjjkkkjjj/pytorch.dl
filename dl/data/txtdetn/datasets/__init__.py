@@ -3,12 +3,12 @@ from .synthtext import *
 from .icdar import *
 from ...objdetn.datasets.base import Compose
 from ...txtrecog.datasets import (
-    ALPHANUMERIC_LABELS,
-    ALPHANUMERIC_NUMBERS,
-    ALPHABET_LABELS,
-    ALPHABET_NUMBERS,
-    ALPHANUMERIC_WITH_BLANK_LABELS,
-    ALPHANUMERIC_WITH_BLANK_NUMBERS,
-    NUMBER_LABELS,
-    NUMBER_NUMBERS
+    Alphanumeric_labels,
+    Alphanumeric_numbers,
+    Alphabet_labels,
+    Alphabet_numbers,
+    Alphanumeric_with_blank_labels,
+    Alphanumeric_with_blank_numbers,
+    Number_labels,
+    Number_numbers
 )

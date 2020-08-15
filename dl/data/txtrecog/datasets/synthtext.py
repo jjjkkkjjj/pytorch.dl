@@ -1,7 +1,8 @@
 import os, cv2, logging, time, csv
 import numpy as np
 
-from .base import TextRecognitionDatasetBase, ALPHANUMERIC_LABELS
+from .base import TextRecognitionDatasetBase, Alphanumeric_labels
+from ...base.synthtext import *
 from ..._utils import _check_ins, DATA_ROOT
 
 class SynthTextRecognitionSingleDatasetBase(TextRecognitionDatasetBase):
@@ -17,7 +18,7 @@ class SynthTextRecognitionSingleDatasetBase(TextRecognitionDatasetBase):
                          augmentation=augmentation)
 
         self._synthtext_dir = synthtext_dir
-        self._class_labels = _check_ins('class_labels', class_labels, (list, tuple), allow_none=True, default=ALPHANUMERIC_LABELS)
+        self._class_labels = _check_ins('class_labels', class_labels, (list, tuple), allow_none=True, default=Alphanumeric_labels)
 
         annopaths = os.path.join(self._synthtext_dir, 'Annotations', 'gt_alphanumeric.csv')
         if not os.path.exists(annopaths):

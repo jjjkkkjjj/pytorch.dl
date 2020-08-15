@@ -2,23 +2,23 @@ import string
 
 from ...objrecog.datasets.base import ObjectRecognitionDatasetBase
 
-ALPHABET_LABELS = list(string.ascii_lowercase)
-ALPHABET_WITH_UPPER_LABELS = ALPHABET_LABELS + list(string.ascii_uppercase)
-ALPHABET_NUMBERS = len(ALPHABET_LABELS)
-ALPHABET_WITH_UPPER_NUMBERS = len(ALPHABET_WITH_UPPER_LABELS)
+Alphabet_labels = list(string.ascii_lowercase)
+Alphabet_with_upper_labels = Alphabet_labels + list(string.ascii_uppercase)
+Alphabet_numbers = len(Alphabet_labels)
+Alphabet_with_upper_numbers = len(Alphabet_with_upper_labels)
 
-NUMBER_LABELS = [str(i) for i in range(10)]
-NUMBER_NUMBERS = len(NUMBER_LABELS)
+Number_labels = [str(i) for i in range(10)]
+Number_numbers = len(Number_labels)
 
-ALPHANUMERIC_LABELS = ALPHABET_LABELS + NUMBER_LABELS
-ALPHANUMERIC_NUMBERS = ALPHABET_NUMBERS + NUMBER_NUMBERS
-ALPHANUMERIC_WITH_UPPER_LABELS = ALPHABET_WITH_UPPER_LABELS + NUMBER_LABELS
-ALPHANUMERIC_WITH_UPPER_NUMBERS = ALPHABET_WITH_UPPER_NUMBERS + NUMBER_NUMBERS
+Alphanumeric_labels = Alphabet_labels + Number_labels
+Alphanumeric_numbers = Alphabet_numbers + Number_numbers
+Alphanumeric_with_upper_labels = Alphabet_with_upper_labels + Number_labels
+Alphanumeric_with_upper_numbers = Alphabet_with_upper_numbers + Number_numbers
 
-ALPHANUMERIC_WITH_BLANK_LABELS = ['-'] + ALPHABET_LABELS + NUMBER_LABELS
-ALPHANUMERIC_WITH_BLANK_NUMBERS = 1 + ALPHABET_NUMBERS + NUMBER_NUMBERS
-ALPHANUMERIC_WITH_UPPER_AND_BLANK_LABELS = ['-'] + ALPHABET_WITH_UPPER_LABELS + NUMBER_LABELS
-ALPHANUMERIC_WITH_UPPER_AND_BLANK_NUMBERS = 1 + ALPHABET_WITH_UPPER_NUMBERS + NUMBER_NUMBERS
+Alphanumeric_with_blank_labels = ['-'] + Alphabet_labels + Number_labels
+Alphanumeric_with_blank_numbers = 1 + Alphabet_numbers + Number_numbers
+Alphanumeric_with_upper_and_blank_labels = ['-'] + Alphabet_with_upper_labels + Number_labels
+Alphanumeric_with_upper_and_blank_numbers = 1 + Alphabet_with_upper_numbers + Number_numbers
 
 class TextRecognitionDatasetBase(ObjectRecognitionDatasetBase):
     def __getitem__(self, index):

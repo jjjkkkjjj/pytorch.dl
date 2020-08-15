@@ -3,13 +3,9 @@ import numpy as np
 from pathlib import Path
 from xml.etree import ElementTree as ET
 from ...txtdetn.datasets.base import TextDetectionDatasetBase, Compose
+from ...base.synthtext import *
 
 from ..._utils import DATA_ROOT, _check_ins, _get_xml_et_value
-
-SynthText_class_labels = ['text']
-SynthText_class_nums = len(SynthText_class_labels)
-
-SynthText_ROOT = os.path.join(DATA_ROOT, 'text', 'SynthText')
 
 class _FoundNonAlphaNumeric(Exception):
     pass
