@@ -11,11 +11,11 @@ class FOTS(TextSpottingModelBase):
     def __init__(self, chars, input_shape):
         super().__init__(chars, input_shape)
 
-        self.feature_extractor = SharedConv(out_channels=64)
-        self.detector = Detector(in_channels=64, dist_scale=512)
+        self.feature_extractor = SharedConv(out_channels=32)
+        self.detector = Detector(in_channels=32, dist_scale=512)
 
         self.roi_rotate = RoIRotate()
-        self.recognizer = CRNN(chars, (8, None, 64), 0)
+        self.recognizer = CRNN(chars, (8, None, 32), 0)
 
     def forward(self, x, labels=None, texts=None):
         """

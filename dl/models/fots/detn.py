@@ -22,13 +22,15 @@ class SharedConv(nn.Module):
         self.res4 = resnet50.layer3
         self.res5 = resnet50.layer4
 
-        #self.deconv_res5 = Deconv(1024, 512)
-        self.deconv_res4 = Deconv(2048, 1024 + 512, shared_channels=1024)
-        self.deconv_res3 = Deconv(1024 + 512, 512 + 256, shared_channels=512)
-        self.deconv_res2 = Deconv(512 + 256, 256 + 128, shared_channels=256)
+        # Note that deconv args' formula is following;
+        # prev_channel = previous out_channels
+        # shared_channels = shared_conv's out_channels
+        self.deconv_res4 = Deconv(2048, 128, shared_channels=1024)
+        self.deconv_res3 = Deconv(128, 64, shared_channels=512)
+        self.deconv_res2 = Deconv(64, 32, shared_channels=256)
 
         self.convlast = nn.Sequential(
-            *Conv2d.relu_one('1', 256 + 128, out_channels, kernel_size=(3, 3), padding=1, batch_norm=True, sequential=True)
+            *Conv2d.relu_one('1', 32, out_channels, kernel_size=(3, 3), padding=1, batch_norm=True, sequential=True)
         )
 
     def forward(self, x):
@@ -38,53 +40,54 @@ class SharedConv(nn.Module):
         """
         x = self.conv1(x)
         x = self.pool1(x)
-        # shape = (b, 256, h/4, w/4)
+
         x = self.res2(x)
-        shared_via_res2 = x.clone()
+        shared_via_res2 = x.clone() # shape = (b, 256, h/4, w/4)
 
-        # shape = (b, 512, h/8, w/8)
         x = self.res3(x)
-        shared_via_res3 = x.clone()
+        shared_via_res3 = x.clone() # shape = (b, 512, h/8, w/8)
 
-        # shape = (b, 1024, h/16, w/16)
         x = self.res4(x)
-        shared_via_res4 = x.clone()
+        shared_via_res4 = x.clone() # shape = (b, 1024, h/16, w/16)
 
-        # shape = (b, 2048, h/32, w/32)
-        x = self.res5(x)
+        x = self.res5(x) # shape = (b, 2048, h/32, w/32)
+        x = self.deconv_res4(x, shared_via_res4) # shape = (b, 128, h/16, w/16)
+        x = self.deconv_res3(x, shared_via_res3) # shape = (b, 64, h/8, w/8)
+        x = self.deconv_res2(x, shared_via_res2) # shape = (b, 32, h/4, w/4)
 
-        # shape = (b, 1024 + 512, h/16, w/16)
-        x = self.deconv_res4(x, shared_via_res4)
-        # shape = (b, 512 + 256, h/8, w/8)
-        x = self.deconv_res3(x, shared_via_res3)
-        # shape = (b, 256 + 128, h/4, w/4)
-        x = self.deconv_res2(x, shared_via_res2)
-
-        # shape = (b, out_channels, h/4, w/4)
-        fmaps = self.convlast(x)
+        fmaps = self.convlast(x) # shape = (b, out_channels, h/4, w/4)
 
         return fmaps
 
 class Deconv(nn.Module):
-    def __init__(self, in_channels, out_channels, shared_channels):
+    def __init__(self, prev_channels, out_channels, shared_channels):
         super().__init__()
-        conv_out_channels = out_channels - shared_channels
-        assert conv_out_channels > 0, "out_channels must be greater than shared_channels"
+        in_channels = prev_channels + shared_channels
 
         self.conv = nn.Sequential(
-            *Conv2d.relu_one('1', in_channels, conv_out_channels, kernel_size=(3, 3), padding=1, batch_norm=True, sequential=True), # reduce feature channels
+            *Conv2d.relu_one('1', in_channels, out_channels, kernel_size=(1, 1), batch_norm=True, sequential=True), # reduce feature channels by 1x1 kernel
+            *Conv2d.relu_one('1', out_channels, out_channels, kernel_size=(3, 3), padding=1, batch_norm=True, sequential=True)
         )
+        self.prev_channels = prev_channels
         self.shared_channels = shared_channels
 
     def forward(self, x, shared_x):
-        _, c, h, w = shared_x.shape
-        assert c == self.shared_channels, "shared_x\'s channels must be {}, but got {}".format(self.shared_channels, shared_x.shape[1])
+        _, c, h, w = x.shape
+        assert c == self.prev_channels, "previous out_channels must be {}, but got {}".format(self.prev_channels, c)
+
+        _, c, h_shared, w_shared = shared_x.shape
+        assert c == self.shared_channels, "shared_x\'s channels must be {}, but got {}".format(self.shared_channels, c)
+
+        # bilinear upsampling
+        x = F.interpolate(x, size=(h_shared, w_shared), mode='bilinear', align_corners=True)
+        assert shared_x.shape[2:] == x.shape[2:], "height and width must be same, but got shared conv: {} and previous conv: {}".format(shared_x.shape[2:], x.shape[2:])
+
+        # share conv
+        x = torch.cat((x, shared_x), dim=1)
 
         x = self.conv(x)
-        # bilinear upsampling
-        x = F.interpolate(x, size=(h, w), mode='bilinear', align_corners=True)
 
-        return torch.cat((x, shared_x), dim=1)
+        return x
 
 class Detector(nn.Module):
     def __init__(self, in_channels, dist_scale=512):
