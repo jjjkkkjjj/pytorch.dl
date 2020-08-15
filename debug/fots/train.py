@@ -8,7 +8,7 @@ from dl.log import *
 
 #from torchvision import transforms > not import!!
 from torch.utils.data import DataLoader
-from torch.optim.sgd import SGD
+from torch.optim.adam import Adam
 
 if __name__ == '__main__':
     """
@@ -49,7 +49,7 @@ if __name__ == '__main__':
     targets = [t.cuda() for t in targets]
     model(img.cuda(), targets, texts)
     """
-    optimizer = SGD(model.parameters(), lr=1e-3, momentum=0.9, weight_decay=5e-4)
+    optimizer = Adam(model.parameters(), lr=1e-3, weight_decay=5e-4)
     iter_sheduler = IterStepLR(optimizer, step_size=60000, gamma=0.1, verbose=True)
 
     save_manager = SaveManager(modelname='fots', interval=1, max_checkpoints=3, plot_interval=10)
