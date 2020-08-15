@@ -12,8 +12,8 @@ class _SampledPatchOp(object):
 
 
 class EntireSample(_SampledPatchOp):
-    def __call__(self, img, bboxes, labels, flags, *args):
-        return img, (bboxes, labels, flags, *args)
+    def __call__(self, img, labels, bboxes, flags, *args):
+        return img, (labels, bboxes, flags, *args)
 
 
 class RandomThresSampledPatch(_SampledPatchOp):
@@ -31,7 +31,7 @@ class RandomThresSampledPatch(_SampledPatchOp):
         self.aspect_ration_min = _check_ins('ar_min', ar_min, (float, int))
         self.aspect_ration_max = _check_ins('ar_max', ar_max, (float, int))
 
-    def __call__(self, img, bboxes, labels, flags, *args):
+    def __call__(self, img, labels, bboxes, flags, *args):
         """
         :param img: ndarray
         :param bboxes: ndarray, shape = (box num, 4=(xmin, ymin, xmax, ymax))
@@ -122,7 +122,7 @@ class RandomThresSampledPatch(_SampledPatchOp):
         ret_quads[:, 0::2] /= float(patch_w)
         ret_quads[:, 1::2] /= float(patch_h)
 
-        return ret_img, (ret_bboxes, ret_labels, flags, ret_quads, ret_texts.tolist())
+        return ret_img, (ret_labels, ret_bboxes, flags, ret_quads, ret_texts.tolist())
 
 
 class RandomIoUSampledPatch(RandomThresSampledPatch):
@@ -164,7 +164,7 @@ class RandomSampled(object):
         self.options = options
         self.max_iteration = max_iteration
 
-    def __call__(self, img, bboxes, labels, flags, *args):
+    def __call__(self, img, labels, bboxes, flags, *args):
         import time
         s = time.time()
         while True:
@@ -172,10 +172,10 @@ class RandomSampled(object):
             op = random.choice(self.options)
 
             if isinstance(op, EntireSample):
-                return op(img, bboxes, labels, flags, *args)
+                return op(img, labels, bboxes, flags, *args)
 
             for _ in range(self.max_iteration):
                 try:
-                    return op(img, bboxes, labels, flags, *args)
+                    return op(img, labels, bboxes, flags, *args)
                 except _SampledPatchOp.UnSatisfy:
                     continue

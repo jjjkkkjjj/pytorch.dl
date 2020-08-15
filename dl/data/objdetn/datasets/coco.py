@@ -105,7 +105,7 @@ class COCOSingleDatasetBase(ObjectDetectionDatasetBase):
         """
         :param index: int
         :return:
-            list of bboxes, list of bboxes' label index, list of flags([difficult, truncated,...])
+            list of bboxes' label index, list of bboxes, list of flags([difficult, truncated,...])
         """
         linds = []
         bboxes = []
@@ -157,7 +157,7 @@ class COCOSingleDatasetBase(ObjectDetectionDatasetBase):
             """
             flags.append({'difficult': anno['iscrowd'] == 1})
 
-        return np.array(bboxes, dtype=np.float32), np.array(linds, dtype=np.float32), flags
+        return np.array(linds, dtype=np.float32), np.array(bboxes, dtype=np.float32), flags
 
 
 class COCOMultiDatasetBase(Compose):

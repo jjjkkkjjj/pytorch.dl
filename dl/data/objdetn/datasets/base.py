@@ -66,22 +66,23 @@ class ObjectDetectionDatasetBase(ObjectRecognitionDatasetBase):
         """
         img = self._get_image(index)
         targets = self._get_target(index)
+
+        img, targets = self.apply_transform(img, *targets)
         if len(targets) >= 3:
-            bboxes, linds, flags = targets[:3]
-            args = targets[3:]
+            labels, bboxes, flags = targets[:3]
         else:
-            raise ValueError('ValueError: not enough values to unpack (expected more than 3, got {})'.format(len(targets)))
-        img, targets = self.apply_transform(img, bboxes, linds, flags, *args)
-        bboxes, linds, flags = targets[:3]
+            raise ValueError(
+                'ValueError: not enough values to unpack (expected more than 3, got {})'.format(len(targets)))
+
         # concatenate bboxes and linds
-        if isinstance(bboxes, torch.Tensor) and isinstance(linds, torch.Tensor):
-            if linds.ndim == 1:
-                linds = linds.unsqueeze(1)
-            targets = torch.cat((bboxes, linds), dim=1)
+        if isinstance(bboxes, torch.Tensor) and isinstance(labels, torch.Tensor):
+            if labels.ndim == 1:
+                labels = labels.unsqueeze(1)
+            targets = torch.cat((bboxes, labels), dim=1)
         else:
-            if linds.ndim == 1:
-                linds = linds[:, np.newaxis]
-            targets = np.concatenate((bboxes, linds), axis=1)
+            if labels.ndim == 1:
+                labels = labels[:, np.newaxis]
+            targets = np.concatenate((bboxes, labels), axis=1)
 
         return img, targets
 
@@ -89,13 +90,19 @@ class ObjectDetectionDatasetBase(ObjectRecognitionDatasetBase):
         """
         IMPORTATANT: apply transform function in order with ignore, augmentation, transform and target_transform
         :param img:
+        :param labels:
         :param bboxes:
-        :param linds:
         :param flags:
         :return:
             Transformed img, bboxes, linds, flags
         """
-        bboxes = targets[0]
+        if len(targets) >= 3:
+            labels, bboxes, flags = targets[:3]
+            args = targets[3:]
+        else:
+            raise ValueError(
+                'ValueError: not enough values to unpack (expected more than 3, got {})'.format(len(targets)))
+
         # To Percent mode
         height, width, channel = img.shape
         # bbox = [xmin, ymin, xmax, ymax]
@@ -104,7 +111,9 @@ class ObjectDetectionDatasetBase(ObjectRecognitionDatasetBase):
         bboxes[:, 1::2] /= float(height)
 
         if self.ignore:
-            targets = self.ignore(bboxes, *targets[1:])
+            targets = self.ignore(labels, bboxes, flags, *args)
+        else:
+            targets = (labels, bboxes, flags, *args)
 
         return super().apply_transform(img, *targets)
 

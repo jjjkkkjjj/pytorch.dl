@@ -47,14 +47,14 @@ class Ignore(_IgnoreBase):
             else:
                 logging.warning('Unsupported arguments: {}'.format(key))
 
-    def __call__(self, bboxes, labels, flags, quads, texts):
+    def __call__(self, labels, bboxes, flags, quads, texts):
         ret_bboxes = []
         ret_labels = []
         ret_flags = []
         ret_quads = []
         ret_texts = []
 
-        for bbox, label, flag, quad, text in zip(bboxes, labels, flags, quads, texts):
+        for label, bbox, flag, quad, text in zip(labels, bboxes, flags, quads, texts):
             flag_keys = list(flag.keys())
             ig_flag = [flag[ig_key] if ig_key in flag_keys else False for ig_key in self.ignore_key]
             if any(ig_flag):
@@ -85,13 +85,13 @@ class Ignore(_IgnoreBase):
         ret_labels = np.array(ret_labels, dtype=np.float32)
         ret_quads = np.array(ret_quads, dtype=np.float32)
 
-        return (ret_bboxes, ret_labels, ret_flags, ret_quads, ret_texts)
+        return (ret_labels, ret_bboxes, ret_flags, ret_quads, ret_texts)
 
 class ToTensor(object):
     def __init__(self, textTensor=False):
         self.textTensor = textTensor
 
-    def __call__(self, bboxes, labels, flags, quads, texts):
+    def __call__(self, labels, bboxes, flags, quads, texts):
         """
         :param bboxes:
         :param labels:
@@ -102,11 +102,11 @@ class ToTensor(object):
         :return:
         """
         texts = [torch.from_numpy(txt) for txt in texts] if self.textTensor else texts
-        return (torch.from_numpy(bboxes), torch.from_numpy(labels), flags, torch.from_numpy(quads), texts)
+        return (torch.from_numpy(labels), torch.from_numpy(bboxes), flags, torch.from_numpy(quads), texts)
 
 
 class ToQuadrilateral(object):
-    def __call__(self, bboxes, labels, flags, quads, texts):
+    def __call__(self, labels, bboxes, flags, quads, texts):
         # Note that bboxes must be [cx, cy, w, h]
         assert quads.shape[1] == 8, '4th arguments must be quadrilateral points'
 
@@ -141,4 +141,4 @@ class ToQuadrilateral(object):
         for b in range(box_num):
             quads[b] = quads[b, np.roll(trans, inds[b])]
 
-        return (bboxes, labels, flags, quads.reshape((-1, 8)), texts)
+        return (labels, bboxes, flags, quads.reshape((-1, 8)), texts)

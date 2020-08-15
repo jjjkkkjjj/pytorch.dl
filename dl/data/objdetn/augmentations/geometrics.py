@@ -16,7 +16,7 @@ class RandomExpand(object):
         assert self.ratio_min >= 0, "must be more than 0"
         assert self.ratio_max >= self.ratio_min, "must be more than factor min"
 
-    def __call__(self, img, bboxes, labels, flags, *args):
+    def __call__(self, img, labels, bboxes, flags, *args):
         # IMPORTANT: img = rgb order, bboxes: minmax coordinates with PERCENT
         if decision(self.p):
             h, w, c = img.shape
@@ -49,7 +49,7 @@ class RandomExpand(object):
             bboxes[:, 0::2] /= float(new_w)
             bboxes[:, 1::2] /= float(new_h)
 
-        return img, (bboxes, labels, flags, *args)
+        return img, (labels, bboxes, flags, *args)
 
 
 class _SampledPatchOp(object):
@@ -57,8 +57,8 @@ class _SampledPatchOp(object):
         pass
 
 class EntireSample(_SampledPatchOp):
-    def __call__(self, img, bboxes, labels, flags, *args):
-        return img, (bboxes, labels, flags, *args)
+    def __call__(self, img, labels, bboxes, flags, *args):
+        return img, (labels, bboxes, flags, *args)
 
 class RandomIoUSampledPatch(_SampledPatchOp):
     def __init__(self, iou_min=None, iou_max=None, ar_min=0.5, ar_max=2):
@@ -71,7 +71,7 @@ class RandomIoUSampledPatch(_SampledPatchOp):
         self.aspect_ration_min = ar_min
         self.aspect_ration_max = ar_max
 
-    def __call__(self, img, bboxes, labels, flags, *args):
+    def __call__(self, img, labels, bboxes, flags, *args):
         # IMPORTANT: img = rgb order, bboxes: minmax coordinates with PERCENT
         h, w, _ = img.shape
 
@@ -136,7 +136,7 @@ class RandomIoUSampledPatch(_SampledPatchOp):
         ret_bboxes[:, 0::2] /= float(patch_w)
         ret_bboxes[:, 1::2] /= float(patch_h)
 
-        return ret_img, (ret_bboxes, ret_labels, flags, *args)
+        return ret_img, (ret_labels, ret_bboxes, flags, *args)
 
 class RandomSampledPatch(RandomIoUSampledPatch):
     def __init__(self):
@@ -165,7 +165,7 @@ class RandomSampled(object):
         self.options = options
         self.max_iteration = max_iteration
 
-    def __call__(self, img, bboxes, labels, flags, *args):
+    def __call__(self, img, labels, bboxes, flags, *args):
         import time
         s = time.time()
         while True:
@@ -173,15 +173,15 @@ class RandomSampled(object):
             op = random.choice(self.options)
 
             if isinstance(op, EntireSample):
-                return op(img, bboxes, labels, flags, args)
+                return op(img, labels, bboxes, flags, args)
 
             for _ in range(self.max_iteration):
                 try:
-                    return op(img, bboxes, labels, flags, args)
+                    return op(img, labels, bboxes, flags, args)
                 except _SampledPatchOp.UnSatisfy:
                     continue
                 """
-                ret = op(img, bboxes, labels, flags)
+                ret = op(img, labels, bboxes, flags)
                 if ret:
                     print(time.time()-s)
                     return ret
@@ -191,7 +191,7 @@ class RandomFlip(object):
     def __init__(self, p=0.5):
         self.p = p
 
-    def __call__(self, img, bboxes, labels, flags, *args):
+    def __call__(self, img, labels, bboxes, flags, *args):
         if decision(self.p):
             _, w_, _ = img.shape
             """
@@ -205,7 +205,7 @@ class RandomFlip(object):
             ret_bboxes[:, 0::2] = 1 - ret_bboxes[:, 2::-2]
             bboxes = ret_bboxes.clip(min=0, max=1)
 
-        return img, (bboxes, labels, flags, *args)
+        return img, (labels, bboxes, flags, *args)
 
 
 class GeometricDistortions(Compose):

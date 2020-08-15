@@ -23,28 +23,28 @@ class TextDetectionDatasetBase(ObjectDetectionDatasetBase):
 
         img, targets = self.apply_transform(img, *targets)
 
-        bboxes, linds, flags, quads, texts = targets[:]
+        labels, bboxes, flags, quads, texts = targets[:]
 
         # concatenate bboxes and linds
-        if isinstance(bboxes, torch.Tensor) and isinstance(linds, torch.Tensor):
-            if linds.ndim == 1:
-                linds = linds.unsqueeze(1)
-            targets = torch.cat((bboxes, quads, linds), dim=1)
+        if isinstance(bboxes, torch.Tensor) and isinstance(labels, torch.Tensor):
+            if labels.ndim == 1:
+                labels = labels.unsqueeze(1)
+            targets = torch.cat((bboxes, quads, labels), dim=1)
         else:
-            if linds.ndim == 1:
-                linds = linds[:, np.newaxis]
-            targets = np.concatenate((bboxes, quads, linds), axis=1)
+            if labels.ndim == 1:
+                labels = labels[:, np.newaxis]
+            targets = np.concatenate((bboxes, quads, labels), axis=1)
 
         return img, targets, texts
         #return img, targets
 
     def apply_transform(self, img, *targets):
-        bboxes, linds, flags, quads, texts = targets[:]
+        labels, bboxes, flags, quads, texts = targets[:]
 
         height, width, channel = img.shape
 
         quads[:, 0::2] /= float(width)
         quads[:, 1::2] /= float(height)
 
-        return super().apply_transform(img, bboxes, linds, flags, quads, texts)
+        return super().apply_transform(img, labels, bboxes, flags, quads, texts)
 

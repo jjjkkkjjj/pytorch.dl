@@ -85,7 +85,7 @@ class SynthTextDetectionSingleDatasetBase(TextDetectionDatasetBase):
         """
         :param index: int
         :return:
-            list of bboxes, list of bboxes' label index, list of flags([difficult, truncated,...])
+            list of bboxes' label index, list of bboxes, list of flags([difficult, truncated,...])
         """
         linds = []
         bboxes = []
@@ -115,7 +115,7 @@ class SynthTextDetectionSingleDatasetBase(TextDetectionDatasetBase):
 
             flags.append({'difficult': _get_xml_et_value(obj, 'difficult', int) == 1})
 
-        return np.array(bboxes, dtype=np.float32), np.array(linds, dtype=np.float32), flags, np.array(quads, dtype=np.float32), texts
+        return np.array(linds, dtype=np.float32), np.array(bboxes, dtype=np.float32), flags, np.array(quads, dtype=np.float32), texts
 
 class SynthTextDetectionMultiDatasetBase(Compose):
     def __init__(self, **kwargs):

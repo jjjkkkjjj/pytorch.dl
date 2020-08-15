@@ -80,7 +80,7 @@ class VOCSingleDatasetBase(ObjectDetectionDatasetBase):
         """
         :param index: int
         :return:
-            list of bboxes, list of bboxes' label index, list of flags([difficult, truncated,...])
+            list of bboxes' label index, list of bboxes, list of flags([difficult, truncated,...])
         """
         linds = []
         bboxes = []
@@ -102,7 +102,7 @@ class VOCSingleDatasetBase(ObjectDetectionDatasetBase):
                           'truncated': _get_xml_et_value(obj, 'truncated', int) == 1,
                           'occluded': _get_xml_et_value(obj, 'occluded', int) == 1})
 
-        return np.array(bboxes, dtype=np.float32), np.array(linds, dtype=np.float32), flags
+        return np.array(linds, dtype=np.float32), np.array(bboxes, dtype=np.float32), flags
 
 class VOCMultiDatasetBase(Compose):
     def __init__(self, **kwargs):
