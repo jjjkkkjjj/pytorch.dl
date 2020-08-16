@@ -50,7 +50,7 @@ if __name__ == '__main__':
     model(img.cuda(), targets, texts)
     """
     optimizer = Adam(model.parameters(), lr=1e-3, weight_decay=5e-4)
-    iter_sheduler = IterStepLR(optimizer, step_size=60000, gamma=0.1, verbose=True)
+    iter_sheduler = IterStepLR(optimizer, step_size=10000, gamma=0.94, verbose=True)
 
     save_manager = SaveManager(modelname='fots', interval=1, max_checkpoints=3, plot_interval=10)
 

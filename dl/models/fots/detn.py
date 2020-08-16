@@ -118,7 +118,7 @@ class Detector(nn.Module):
 
         # shape = (b, 1, h/4, w/4)
         angle = self.angle_layer(features)
-        # angle range is (-pi/2, pi/2)
-        angle = torch.sigmoid(angle) * math.pi / 2
+        # angle range is (-pi/4, pi/4)
+        angle = (torch.sigmoid(angle) - 0.5) * math.pi / 2
 
         return conf.permute((0, 2, 3, 1)).contiguous(), torch.cat((distances, angle), dim=1).permute((0, 2, 3, 1)).contiguous()

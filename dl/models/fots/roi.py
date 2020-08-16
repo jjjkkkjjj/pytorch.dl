@@ -2,7 +2,7 @@ import torch
 from torch.nn import Module
 from torch.nn import functional as F
 import numpy as np
-import cv2
+import cv2, math
 
 class RoIRotate(Module):
     def __init__(self, height=8):
@@ -37,21 +37,29 @@ class RoIRotate(Module):
 
             textnums = bboxes.shape[0]
             for t in range(textnums):
-                xmin, ymin, xmax, ymax = bboxes[t]
+                quad = quads[t].reshape((4, 2))
+                tl, tr, bl, br = quad
 
-                aspect_ratio = (xmax - xmin) / float(ymax - ymin)
-                width = np.clip(int(aspect_ratio * self.height), 1, w)
+                # minAreaRect returns center_point, size, angle(deg)
+                _, size, _ = cv2.minAreaRect(quad)
+                box_w, box_h = size
 
-                src = np.float32([[xmin, ymin], [xmin, ymax], [xmax, ymin]])
-                dst = np.float32([[0, 0], [0, self.height], [width, 0]])
+                box_w = max(box_w, 1)
+                box_h = max(box_h, 1)
+                # ceil is for avoiding to box_w = zero
+                box_w = math.ceil(self.height * box_w / box_h)
+                box_w = min(w, box_w)
+
+                src = np.float32([tl, tr, br])
+                dst = np.float32([[0, 0], [box_w, 0], [0, self.height]])
 
                 # https://discuss.pytorch.org/t/affine-transformation-matrix-paramters-conversion/19522/17
-                affine_matrix = cv2.getAffineTransform(dst, src)
+                affine_matrix = cv2.getAffineTransform(src, dst)
 
-                theta = _affine2theta(affine_matrix, width, self.height, device)
+                theta = _affine2theta(affine_matrix, box_w, box_h, device)
 
                 images += [fmaps[b]]
-                widths += [width]
+                widths += [box_w]
                 matrices += [theta]
 
             images = torch.stack(images) # shape = (text num, c, h/4, w/4)
@@ -106,6 +114,13 @@ def _affine2theta(M, w, h, device):
     # M' = ( 2/w_d,     0,   -1)^-1        ( 2/w_s,     0,   -1)
     #      (     0, 2/h_d,   -1)    * M *  (     0, 2/h_s,   -1)
     #      (     0,     0,    1)           (     0,     0,    1)
+    theta00 = M[0, 0]
+    theta01 = M[0, 1]*h/w
+    theta02 = M[0, 2]*2/w + theta00 + theta01 - 1
 
-    return torch.tensor(((M[0, 0], M[0, 1]*h/w, M[0, 2]*2/w + M[0, 0] + M[0, 1] - 1),
-                         (M[1, 0]*w/h, M[1, 1], M[1, 2]*2/h + M[1, 0] + M[1, 1] - 1)), device=device)
+    theta10 = M[1, 0]*w/h
+    theta11 = M[1, 1]
+    theta12 = M[1, 2]*2/h + theta10 + theta11 - 1
+
+    return torch.tensor(((theta00, theta01, theta02),
+                         (theta10, theta11, theta12)), device=device)

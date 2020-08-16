@@ -2,7 +2,7 @@ import torch, types
 from torch import nn
 from torch.nn import functional as F
 
-from ..data.utils.boxes import dice, dists2corners, poscreator_quads
+from ..data.utils.boxes import dice, iou, dists2corners, poscreator_quads
 from .utils import ohem
 
 class FOTSLoss(nn.Module):
@@ -181,8 +181,8 @@ class RegressionLoss(nn.Module):
                     p_confs = pred_confs[b][mask] # shape = (masked number, 1)
 
                     # calculate loss for each true text box
-                    # dice's shape = (masked number, 1)
-                    loc_loss += [dice(p_boxes, t_box)]
+                    # iou's shape = (masked number, 1)
+                    loc_loss += [iou(p_boxes, t_box)]
                     # cosine_similarity's shape = (masked number,)
                     # convert to (masked number, 1)
                     # p_thetas is between [-pi/2, pi/2]
