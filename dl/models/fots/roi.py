@@ -5,14 +5,15 @@ import numpy as np
 import cv2, math
 
 class RoIRotate(Module):
-    def __init__(self, height=8):
+    def __init__(self, height=8, _debug=False):
         super().__init__()
         self.height = height
+        self._debug = _debug
 
     def forward(self, fmaps, pred_locs, true_locs):
         """
         :param fmaps: feature maps Tensor, shape = (b, c, h/4, w/4)
-        :param pred_locs: predicted Tensor, shape = (b, h/4, w/4, 5=(conf, t, l, b, r, angle))
+        :param pred_locs: predicted Tensor, shape = (b, h/4, w/4, 6=(conf, t, l, b, r, angle))
         :param true_locs: list(b) of tensor, shape = (text number, 4=(xmin, ymin, xmax, ymax)+8=(x1, y1,...)+1=angle))
         :return:
             ret_rotated_features: list(b) of Tensor, shape = (text nums, c, height=8, non-fixed width)
@@ -37,6 +38,7 @@ class RoIRotate(Module):
 
             textnums = bboxes.shape[0]
             for t in range(textnums):
+                img = fmaps[b]
                 quad = quads[t].reshape((4, 2))
                 tl, tr, bl, br = quad
 
@@ -44,8 +46,13 @@ class RoIRotate(Module):
                 _, size, _ = cv2.minAreaRect(quad)
                 box_w, box_h = size
 
-                box_w = max(box_w, 1)
-                box_h = max(box_h, 1)
+                # minAreaRect calculates angle for longer side
+                # https://stackoverflow.com/questions/15956124/minarearect-angles-unsure-about-the-angle-returned/21427814#21427814
+                if box_w <= box_h:
+                    box_w, box_h = box_h, box_w
+
+                #box_w = max(box_w, 1)
+                #box_h = max(box_h, 1)
                 # ceil is for avoiding to box_w = zero
                 box_w = math.ceil(self.height * box_w / box_h)
                 box_w = min(w, box_w)
@@ -56,17 +63,24 @@ class RoIRotate(Module):
                 # https://discuss.pytorch.org/t/affine-transformation-matrix-paramters-conversion/19522/17
                 affine_matrix = cv2.getAffineTransform(src, dst)
 
-                theta = _affine2theta(affine_matrix, box_w, box_h, device)
+                # for debug
+                if self._debug:
+                    img = cv2.warpAffine((fmaps[b]*255).permute(1,2,0).cpu().numpy().astype(np.uint8), affine_matrix, (int(box_w), int(self.height)))
 
-                images += [fmaps[b]]
+                theta = _affine2theta(affine_matrix, w, h, device)
+
+                images += [img]
                 widths += [box_w]
                 matrices += [theta]
+            # for debug
+            if self._debug:
+                ret_rotated_features += [images]
+                continue
 
             images = torch.stack(images) # shape = (text num, c, h/4, w/4)
             matrices = torch.stack(matrices) # shape = (text num, 2, 3)
             grid = F.affine_grid(matrices, images.size(), align_corners=True)
             rotated_features = F.grid_sample(images, grid, mode='bilinear', align_corners=True) # shape = (text num, c, h/4, w/4)
-
             max_width = np.max(widths)
 
             pad_images = torch.zeros((textnums, c, self.height, max_width), device=device)
@@ -74,6 +88,9 @@ class RoIRotate(Module):
                 pad_images[t, :, :self.height, :widths[t]] = rotated_features[t, :, :self.height, :widths[t]]
 
             ret_rotated_features += [pad_images]
+
+        if self._debug:
+            return ret_rotated_features
 
         return ret_rotated_features
 
@@ -114,6 +131,11 @@ def _affine2theta(M, w, h, device):
     # M' = ( 2/w_d,     0,   -1)^-1        ( 2/w_s,     0,   -1)
     #      (     0, 2/h_d,   -1)    * M *  (     0, 2/h_s,   -1)
     #      (     0,     0,    1)           (     0,     0,    1)
+
+    """
+    M = np.vstack([M, [0, 0, 1]])
+    M = np.linalg.inv(M)
+
     theta00 = M[0, 0]
     theta01 = M[0, 1]*h/w
     theta02 = M[0, 2]*2/w + theta00 + theta01 - 1
@@ -124,3 +146,14 @@ def _affine2theta(M, w, h, device):
 
     return torch.tensor(((theta00, theta01, theta02),
                          (theta10, theta11, theta12)), device=device)
+    """
+    def norm_mat(W, H):
+        return np.array(((2.0/W,     0,   -1),
+                         (    0, 2.0/H,   -1),
+                         (    0,     0,    1)))
+
+    M = np.vstack([M, [0, 0, 1]])
+    M = np.linalg.inv(M)
+
+    theta = norm_mat(w, h) @ M @ np.linalg.inv(norm_mat(w, h))
+    return torch.from_numpy(theta[:2, :]).to(dtype=torch.float, device=device)

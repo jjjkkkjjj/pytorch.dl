@@ -36,10 +36,7 @@ def matching_strategy(fmaps, labels):
 
             # calculate vector and angle
             _, _, t_angle = cv2.minAreaRect(quad.reshape((4, 2)))
-            if t_angle < -45:# (-pi/4, 0)
-                t_angle = -(np.pi/2 + t_angle * np.pi/180)
-            else:# [0, pi/4)
-                t_angle = -t_angle * np.pi/180
+            t_angle = t_angle * np.pi/180
 
             t_angles += [t_angle]
 
