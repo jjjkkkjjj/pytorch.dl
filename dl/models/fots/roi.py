@@ -51,8 +51,6 @@ class RoIRotate(Module):
                 if box_w <= box_h:
                     box_w, box_h = box_h, box_w
 
-                #box_w = max(box_w, 1)
-                #box_h = max(box_h, 1)
                 # ceil is for avoiding to box_w = zero
                 box_w = math.ceil(self.height * box_w / box_h)
                 box_w = min(w, box_w)

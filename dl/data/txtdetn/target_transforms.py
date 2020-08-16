@@ -1,4 +1,4 @@
-import logging, torch
+import logging, torch, cv2
 import numpy as np
 
 from ..._utils import _check_ins
@@ -70,10 +70,15 @@ class Ignore(_IgnoreBase):
             #if self._ignore_partial and flag['partial']:
             #    continue
             """
+            _, size, _ = cv2.minAreaRect(quad.reshape((4, 2)))
             # bbox = [xmin, ymin, xmax, ymax]
-            if self.ignore_strange and (bbox[0] == bbox[2] or bbox[1] == bbox[3]):
+            if self.ignore_strange and\
+                    ((bbox[0] == bbox[2] or bbox[1] == bbox[3]) or (size[0] == 0 or size[1] == 0)):
                 # ignore strange bounding box (xmin == xmax or ymin == ymax)
+                # ignore strange quad,
+                # e.g. [0.01231165 0.61663795 0.01231165 0.61663795 0.0123784  0.75113 0.0123784  0.75113   ]
                 continue
+
 
             ret_bboxes += [bbox]
             ret_labels += [label]
