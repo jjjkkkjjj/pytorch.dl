@@ -8,7 +8,7 @@ class CRNN(CRNNBase):
         super().__init__(class_labels, input_shape, blankIndex)
         self.leakyReLu = leakyReLu
 
-    def build_conv(self, *args, **kwargs):
+    def build_conv(self):
         conv_layers = [
             *Conv2d.block_relumpool(1, 1, self.input_channel, 64, conv_k_size=(3, 3), conv_stride=(1, 1), conv_padding=(1, 1),
                                     batch_norm=False, relu_inplace=True, pool_k_size=(2, 2), pool_stride=(2, 2)),
@@ -26,12 +26,12 @@ class CRNN(CRNNBase):
                              batch_norm=False, relu_inplace=True)
         ]
 
-        self.conv_layers = nn.ModuleDict(conv_layers)
+        return nn.ModuleDict(conv_layers)
 
-    def build_rec(self, *args, **kwargs):
+    def build_rec(self):
         rec_layers = [
             ('BiLSTM1', BidirectionalLSTM(512, 256, 256)),
             ('BiLSTM2', BidirectionalLSTM(256, 256, self.class_nums)),
         ]
 
-        self.rec_layers = nn.ModuleDict(rec_layers)
+        return nn.ModuleDict(rec_layers)

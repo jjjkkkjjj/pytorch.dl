@@ -15,12 +15,28 @@ def _check_ins(name, val, cls, allow_none=False, default=None):
         return default
 
     if not isinstance(val, cls):
+        err = 'Argument \'{}\' must be {}, but got {}'
         if isinstance(cls, (tuple, list)):
             types = [c.__name__ for c in cls]
-            raise ValueError('Argument \'{}\' must be {}, but got {}'.format(name, types, type(val).__name__))
+            err = err.format(name, types, type(val).__name__)
+            raise ValueError(err)
         else:
-            raise ValueError('Argument \'{}\' must be {}, but got {}'.format(name, cls.__name__, type(val).__name__))
+            err = err.format(name, cls.__name__, type(val).__name__)
+            raise ValueError(err)
     return val
+
+def _check_retval(funcname, val, cls):
+    if not isinstance(val, cls):
+        err = '\'{}\' must return {}, but got {}'
+        if isinstance(cls, (tuple, list)):
+            types = [c.__name__ for c in cls]
+            err = err.format(funcname, types, type(val).__name__)
+            raise ValueError(err)
+        else:
+            err = err.format(funcname, cls.__name__, type(val).__name__)
+            raise ValueError(err)
+    return val
+
 
 def _check_norm(name, val):
     if isinstance(val, (float, int)):

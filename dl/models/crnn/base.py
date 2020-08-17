@@ -1,7 +1,7 @@
 from ..layers import *
 from ..base import ObjectRecognitionModelBase
 from .codec import CTCCodec
-from ..._utils import _check_image, _get_normed_and_origin_img
+from ..._utils import _check_retval, _check_image, _get_normed_and_origin_img
 
 from torch.nn import functional as F
 import logging, abc
@@ -13,8 +13,8 @@ class CRNNBase(ObjectRecognitionModelBase):
         self.blankIndex = blankIndex
         self.codec = CTCCodec(class_labels, blankIndex)
 
-        self.build_conv()
-        self.build_rec()
+        self.conv_layers = _check_retval('build_conv', self.build_conv(), nn.ModuleDict)
+        self.rec_layers = _check_retval('build_rec', self.build_rec(), nn.ModuleDict)
 
     @property
     def encoder(self):
@@ -25,11 +25,11 @@ class CRNNBase(ObjectRecognitionModelBase):
         return self.codec.decoder
 
     @abc.abstractmethod
-    def build_conv(self, *args, **kwargs):
+    def build_conv(self):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def build_rec(self, *args, **kwargs):
+    def build_rec(self):
         raise NotImplementedError()
 
     def forward(self, x, targets=None):
@@ -39,9 +39,6 @@ class CRNNBase(ObjectRecognitionModelBase):
         :return:
             output: output tensor, shape = (times, b, class_nums)
         """
-        if not (hasattr(self, 'conv_layers') and hasattr(self, 'rec_layers')):
-            raise NotImplementedError('must be set \'conv_layers\' and \'rec_layers\' in build')
-
         if self.training and targets is None:
             raise ValueError("pass \'targets\' for training mode")
 
