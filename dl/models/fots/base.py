@@ -1,21 +1,42 @@
-import logging
+import logging, abc
+from torch import nn
 
 from ..base import TextSpottingModelBase
-from .detn import SharedConv, Detector
 from .roi import RoIRotate
-from .recog import CRNN
+from .recog import CRNNBase
 from .utils import matching_strategy
+from ..._utils import _check_retval
 
+class FeatureExtractorBase(nn.Module):
+    def __init__(self, out_channels):
+        super().__init__()
+        self.out_channels = out_channels
 
-class FOTS(TextSpottingModelBase):
+class DetectorBase(nn.Module):
+    pass
+
+class FOTSBase(TextSpottingModelBase):
     def __init__(self, chars, input_shape):
         super().__init__(chars, input_shape)
 
-        self.feature_extractor = SharedConv(out_channels=32)
-        self.detector = Detector(in_channels=32, dist_scale=512)
+        self.feature_extractor = _check_retval('build_feature_extractor', self.build_feature_extractor(), FeatureExtractorBase)
+        self.detector = _check_retval('build_detector', self.build_detector(), DetectorBase)
 
         self.roi_rotate = RoIRotate()
-        self.recognizer = CRNN(chars, (8, None, 32), 0)
+        self.recognizer = _check_retval('build_recognizer', self.build_recognizer(), CRNNBase)
+
+    @abc.abstractmethod
+    def build_feature_extractor(self):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def build_detector(self):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def build_recognizer(self):
+        raise NotImplementedError()
+
 
     def forward(self, x, labels=None, texts=None):
         """
@@ -68,3 +89,6 @@ class FOTS(TextSpottingModelBase):
 
         else:
             pass
+
+
+

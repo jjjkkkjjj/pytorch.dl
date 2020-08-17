@@ -1,6 +1,6 @@
 from dl.data.txtdetn import datasets, utils, target_transforms, augmentations
 from dl.data import transforms
-from dl.models.fots import FOTS
+from dl.models.fots import FOTSRes50
 from dl.loss.fots import FOTSLoss
 
 from dl.optim.scheduler import IterStepLR
@@ -41,7 +41,7 @@ if __name__ == '__main__':
                               num_workers=4,
                               pin_memory=True)
 
-    model = FOTS(chars=datasets.SynthText_char_labels_without_upper_blank, input_shape=(None, None, 3)).cuda()
+    model = FOTSRes50(chars=datasets.SynthText_char_labels_without_upper_blank, input_shape=(None, None, 3)).cuda()
     print(model)
     """
     train_iter = iter(train_loader)
