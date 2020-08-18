@@ -1,6 +1,6 @@
 from .base import FOTSBase
 from .detn import Detector
-from .featextr import SharedConvRes50
+from .featextr import SharedConvRes34
 from .recog import CRNN
 
 
@@ -9,7 +9,7 @@ class FOTSRes34(FOTSBase):
         super().__init__(chars, input_shape)
 
     def build_feature_extractor(self):
-        return SharedConvRes50(out_channels=32)
+        return SharedConvRes34(out_channels=32)
 
     def build_detector(self):
         return Detector(in_channels=32, dist_scale=512)

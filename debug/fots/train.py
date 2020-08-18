@@ -1,6 +1,6 @@
 from dl.data.txtdetn import datasets, utils, target_transforms, augmentations
 from dl.data import transforms
-from dl.models.fots import FOTSRes50
+from dl.models.fots import FOTSRes50, FOTSRes34
 from dl.loss.fots import FOTSLoss
 
 from dl.optim.scheduler import IterStepLR
