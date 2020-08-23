@@ -85,7 +85,9 @@ class Ignore(_IgnoreBase):
             ret_flags += [flag]
             ret_quads += [quad]
             ret_texts += [text]
-
+        if len(ret_bboxes) == 0:
+            print("")
+            print("zero!!!!!")
         ret_bboxes = np.array(ret_bboxes, dtype=np.float32)
         ret_labels = np.array(ret_labels, dtype=np.float32)
         ret_quads = np.array(ret_quads, dtype=np.float32)

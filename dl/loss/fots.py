@@ -78,11 +78,20 @@ class DetectionLoss(nn.Module):
 
 
 class ClassificationLoss(nn.Module):
-    def __init__(self, hard_neg_num=512, random_neg_num=512):
+    def __init__(self, hard_neg_num=512, random_neg_num=512, lossfunc='dice'):
         super().__init__()
 
         self.hard_neg_num = hard_neg_num
         self.random_neg_num = random_neg_num
+
+        if lossfunc == 'dice':
+            self.loss_func = dice_coef
+            self.loss_funckwargs = {}
+        elif lossfunc == 'bce':
+            self.loss_func = stableBCE
+            self.loss_funckwargs = {'reduction': 'sum'}
+        else:
+            raise ValueError('lossfunc must be [\'dice\', \'bce\'], but got {}'.format(lossfunc))
 
     def forward(self, pos_indicator, pred_confs):
         """
@@ -96,7 +105,8 @@ class ClassificationLoss(nn.Module):
         for b in range(batch_nums):
             # shape = (pos num, 1)
             pos_confs = pred_confs[b][pos_indicator[b]]
-            pos_loss = F.binary_cross_entropy(pos_confs, torch.ones_like(pos_confs), reduction='sum')
+            #pos_loss = stableBCE(pos_confs, torch.ones_like(pos_confs), reduction='sum')
+            pos_loss = self.loss_func(pos_confs, torch.ones_like(pos_confs), **self.loss_funckwargs)
 
             # shape = (neg num, 1)
             neg_confs = pred_confs[b][neg_indicator[b]]
@@ -105,20 +115,27 @@ class ClassificationLoss(nn.Module):
                                                                    random_sample_nums=self.random_neg_num)
             # hard negative
             hardn_confs = neg_confs[hard_neg_indices]
-            hardn_loss = F.binary_cross_entropy(hardn_confs, torch.zeros_like(hardn_confs), reduction='sum')
+            #hardn_loss = stableBCE(hardn_confs, torch.zeros_like(hardn_confs), reduction='sum')
+            hardn_loss = self.loss_func(hardn_confs, torch.zeros_like(hardn_confs), **self.loss_funckwargs)
 
             # avoid in-place
             #loss[b] = loss[b] + pos_loss + hardn_loss
             if rand_neg_indices.numel() > 0:
                 # random negative
                 hardnrand_confs = neg_confs[rand_neg_indices]
-                hardnrand_loss = F.binary_cross_entropy(hardnrand_confs, torch.zeros_like(hardnrand_confs), reduction='sum')
+                #hardnrand_loss = stableBCE(hardnrand_confs, torch.zeros_like(hardnrand_confs), reduction='sum')
+                hardnrand_loss = self.loss_func(hardnrand_confs, torch.zeros_like(hardnrand_confs), **self.loss_funckwargs)
 
                 loss[b] = (pos_loss + hardn_loss + hardnrand_loss) / sample_nums
 
             else:
                 loss[b] = (pos_loss + hardn_loss) / sample_nums
-
+            if torch.isinf(loss[b]).sum().item() > 0:
+                print('class loss is inf!!!')
+                print(pos_confs)
+                print(neg_confs)
+                print(pos_loss, hardn_loss, sample_nums)
+                exit()
         return loss
 
 class RegressionLoss(nn.Module):
@@ -232,3 +249,20 @@ class RecognitionLoss(nn.Module):
             loss[b] = F.ctc_loss(p, t, p_l, t_l, blank=self.blankIndex, reduction='mean', zero_infinity=True)
 
         return loss
+
+
+def stableBCE(predict, target, reduction='none'):
+    return F.binary_cross_entropy(torch.clamp(predict, min=1e-7, max=1-1e-7), target, reduction=reduction)
+
+def dice_coef(predict, target):
+    """
+    return summed dice coefficient
+    :param predict:
+    :param target:
+    :return:
+    """
+    eps = 1e-7
+    intersection = torch.sum(predict*target) + eps
+    union = torch.sum(predict) + torch.sum(target) + eps
+    dice = 1 - (2 * intersection / union)
+    return dice
