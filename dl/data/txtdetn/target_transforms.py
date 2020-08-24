@@ -14,6 +14,7 @@ from ..objdetn.target_transforms import (
 )
 from ..objdetn.target_transforms import _IgnoreBase
 from ..txtrecog.target_transforms import Text2Number as _Text2Number
+from ..utils.boxes import  shrink_quads_numpy
 
 class Text2Number(object):
     def __init__(self, class_labels, blankIndex=None, ignore_nolabel=True, toLower=True):
@@ -86,8 +87,7 @@ class Ignore(_IgnoreBase):
             ret_quads += [quad]
             ret_texts += [text]
         if len(ret_bboxes) == 0:
-            print("")
-            print("zero!!!!!")
+            logging.warning("No labels!!\nAll labels may have been ignored.")
         ret_bboxes = np.array(ret_bboxes, dtype=np.float32)
         ret_labels = np.array(ret_labels, dtype=np.float32)
         ret_quads = np.array(ret_quads, dtype=np.float32)
