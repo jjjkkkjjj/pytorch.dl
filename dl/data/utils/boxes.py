@@ -1,4 +1,4 @@
-import torch
+import torch, cv2
 from PIL import Image, ImageDraw
 import numpy as np
 from shapely.geometry import Polygon, MultiPoint, MultiPolygon
@@ -365,3 +365,122 @@ def poscreator_quads(quad, h, w, device):
     ImageDraw.Draw(img).polygon(_quad.cpu().numpy(), outline=255, fill=255)
     # img.show()
     return torch.from_numpy(np.array(img, dtype=np.bool)).to(device=device)
+
+
+def shrink_quads_numpy(reshaped_quads, ref_lengths, scale=0.3):
+    """
+    convert quads into rbox, see fig4 in EAST paper
+    :param reshaped_quads: ndarray, shape = (box nums, 4=(clockwise from top-left), 2=(x,y))
+    :param ref_lengths: ndarray, shape = (box nums, 4)
+    :param scale: int, shrink scale
+    :return: rboxes: ndarray, shape = (box nums, 4=(clockwise from top-left), 2=(x, y))
+    """
+    assert reshaped_quads.shape[-2:] == (4, 2), "reshaped_quads' shape must be (box nums, 4, 2)"
+
+    def _shrink_h(quad, ref_len):
+        """
+        :param quad: ndarray, shape = (4, 2)
+        :param ref_len: ndarray, shape = (4,)
+        """
+        # get angle
+        adj_quad = np.roll(quad[::-1], 2, axis=0)  # adjacent points
+        # shape = (4,)
+        angles = np.arctan2(adj_quad[:, 1] - quad[:, 1], adj_quad[:, 0] - quad[:, 0])
+
+        # shape = (4,2)
+        trigonometric = np.array([np.cos(angles),
+                                  np.sin(angles)]).T
+
+        quad += np.expand_dims(ref_len, axis=-1) * trigonometric * scale
+
+        return quad
+
+    def _shrink_v(quad, ref_len):
+        """
+        :param quad: ndarray, shape = (4, 2)
+        :param ref_len: ndarray, shape = (4,)
+        """
+        # get angle
+        adj_quad = quad[::-1]  # adjacent points
+        # shape = (4,)
+        angles = np.arctan2(adj_quad[:, 0] - quad[:, 0], adj_quad[:, 1] - quad[:, 1])
+
+        # shape = (4,2)
+        trigonometric = np.array([np.sin(angles),
+                                  np.cos(angles)]).T
+
+        quad += np.expand_dims(ref_len, axis=-1) * trigonometric * scale
+
+        return quad
+
+    def _shrink(quad, ref_len, horizontal_first):
+        """
+        :param quad: ndarray, shape = (4, 2)
+        :param ref_len: ndarray, shape = (4,)
+        :param horizontal_first: boolean, if True, horizontal edges will be shrunk first, otherwise vertical ones will be shrunk first
+        :return:
+        """
+        if horizontal_first:
+            quad = _shrink_h(quad, ref_len)
+            quad = _shrink_v(quad, ref_len)
+        else:
+            quad = _shrink_v(quad, ref_len)
+            quad = _shrink_h(quad, ref_len)
+
+        return quad
+
+    box_nums = reshaped_quads.shape[0]
+
+    # lengths, clockwise from horizontal top edge
+    # shape = (box nums, 4)
+    lengths = np.linalg.norm(reshaped_quads - np.roll(reshaped_quads, 1, axis=1), axis=-1)
+
+    h_lens, v_lens = np.mean(lengths[:, ::2], axis=-1), np.mean(lengths[:, 1::2], axis=-1)
+    horizontal_firsts = h_lens > v_lens
+
+    shrinked_quads = np.array([_shrink(reshaped_quads[b], ref_lengths[b], horizontal_firsts[b]) for b in range(box_nums)])
+    return shrinked_quads
+
+
+
+def quads2rboxes_numpy(quads, scale):
+    """
+    convert quads into rbox, see fig4 in EAST paper
+    https://github.com/Masao-Taketani/FOTS_OCR/blob/5c214bf2e3d815d6f826f7771da92ba4d899d08b/data_provider/data_utils.py#L575
+
+    Brief summary of rbox creation from quads
+
+    1. compute reference lengths (ref_lengths) by getting shorter edge adjacent one point
+    2. shrink longer edge pair* with scale value
+        *: longer pair is got by comparing between two opposing edges following;
+            (vertical edge1 + 2)ave <=> (horizontal edge1 + 2)ave
+        Note that shrinking way is different between vertical edges pair and horizontal one
+        horizontal: (x_i, y_i) += scale*(ref_lengths_i*cos + ref_lengths_(i mod 4 + 1)*sin)
+        vertical:   (x_i, y_i) += scale*(ref_lengths_i*sin + ref_lengths_(i mod 4 + 1)*cos)
+    3. create minimum rectangle surrounding quads points and angle. these values are created by opencv's minAreaRect
+
+    :param quads: ndarray, shape = (box nums, 8)
+    :param scale: int, shrink scale
+    :return: rboxes: ndarray, shape=(box nums, 9=(8=(x1,y1,...clockwise order)+1=(angle))
+    """
+    reshaped_quads = quads.reshape((-1, 4, 2))
+
+    # reference lengths, clockwise from horizontal top edge
+    # shape = (box nums, 4)
+    ref_lengths = np.minimum(np.linalg.norm(reshaped_quads - np.roll(reshaped_quads, 1, axis=1), axis=-1),
+                             np.linalg.norm(reshaped_quads - np.roll(reshaped_quads, -1, axis=1), axis=-1))
+
+    shrinked_quads = shrink_quads_numpy(reshaped_quads, ref_lengths, scale)
+
+    box_nums = reshaped_quads.shape[0]
+    rboxes = np.zeros((box_nums, 9))  # 9=(8=(x1,y1,...clockwise order)+1=(angle))
+    rboxes[:, :8] = shrinked_quads.reshape((-1, 8))
+    for b in range(box_nums):
+        rect = cv2.minAreaRect(reshaped_quads[b].astype(np.int))
+        _, _, angle = rect
+        # box = cv2.boxPoints(rect)
+        angle += 90 - 45
+        angle = np.deg2rad(angle)
+        rboxes[b, -1] = angle
+
+    return rboxes
