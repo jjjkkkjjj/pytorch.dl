@@ -1,4 +1,5 @@
-from ....data.utils.boxes import centroids2corners, iou, quads_iou
+from ....data.utils.boxes import centroids2corners, iou
+from ....data.utils.quads import quads_iou
 from ...._utils import _check_ins
 
 from torch.nn import Module

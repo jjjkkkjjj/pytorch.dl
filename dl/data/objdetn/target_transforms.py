@@ -4,6 +4,7 @@ import logging
 
 from .._utils import _one_hot_encode, _check_ins
 from ..base.target_transforms import _IgnoreBase, Compose
+from ..utils.boxes import *
 
 class ToTensor(object):
     def __call__(self, labels, bboxes, flags, *args):
@@ -12,52 +13,32 @@ class ToTensor(object):
 class Corners2Centroids(object):
     def __call__(self, labels, bboxes, flags, *args):
         # bbox = [xmin, ymin, xmax, ymax] to [cx, cy, w, h]
-        bboxes = np.concatenate(((bboxes[:, 2:] + bboxes[:, :2]) / 2,
-                                 (bboxes[:, 2:] - bboxes[:, :2])), axis=1)
-
-        return (labels, bboxes, flags, *args)
+        return (labels, corners2centroids_numpy(bboxes), flags, *args)
 
 class Corners2MinMax(object):
     def __call__(self, labels, bboxes, flags, *args):
         # bbox = [xmin, ymin, xmax, ymax] to [xmin, xmax, ymin, ymax]
-        bboxes = bboxes[:, np.array((0, 2, 1, 3))]
-
-        return (labels, bboxes, flags, *args)
+        return (labels, corners2minmax_numpy(bboxes), flags, *args)
 
 class Centroids2Corners(object):
     def __call__(self, labels, bboxes, flags, *args):
         # bbox = [cx, cy, w, h] to [xmin, ymin, xmax, ymax]
-        bboxes = np.concatenate((bboxes[:, :2] - bboxes[:, 2:]/2,
-                                 bboxes[:, :2] + bboxes[:, 2:]/2), axis=1)
-
-        return (labels, bboxes, flags, *args)
+        return (labels, centroids2corners_numpy(bboxes), flags, *args)
 
 class Centroids2MinMax(object):
     def __call__(self, labels, bboxes, flags, *args):
         # bbox = [cx, cy, w, h] to [xmin, xmax, ymin, ymax]
-        bboxes = np.concatenate((bboxes[:, 0] - bboxes[:, 2]/2,
-                                 bboxes[:, 0] + bboxes[:, 2]/2,
-                                 bboxes[:, 1] - bboxes[:, 3]/2,
-                                 bboxes[:, 1] + bboxes[:, 3]/2), axis=1)
-
-        return (labels, bboxes, flags, *args)
+        return (labels, centroids2minmax_numpy(bboxes), flags, *args)
 
 class MinMax2Centroids(object):
     def __call__(self, labels, bboxes, flags, *args):
         # bbox = [xmin, xmax, ymin, ymax] to [cx, cy, w, h]
-        bboxes = np.concatenate((bboxes[:, 0] + (bboxes[:, 1] - bboxes[:, 0])/2,
-                                 bboxes[:, 2] + (bboxes[:, 3] - bboxes[:, 2])/2,
-                                 bboxes[:, 1] - bboxes[:, 0],
-                                 bboxes[:, 3] - bboxes[:, 2]), axis=1)
-
-        return (labels, bboxes, flags, *args)
+        return (labels, minmax2centroids_numpy(bboxes), flags, *args)
 
 class MinMax2Corners(object):
     def __call__(self, labels, bboxes, flags, *args):
         # bbox = [xmin, xmax, ymin, ymax] to [xmin, ymin, xmax, ymax]
-        bboxes = bboxes[:, np.array((0, 2, 1, 3))]
-
-        return (labels, bboxes, flags, *args)
+        return (labels, minmax2corners_numpy(bboxes), flags, *args)
 
 
 class Ignore(_IgnoreBase):

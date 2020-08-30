@@ -14,7 +14,7 @@ from ..objdetn.target_transforms import (
 )
 from ..objdetn.target_transforms import _IgnoreBase
 from ..txtrecog.target_transforms import Text2Number as _Text2Number
-from ..utils.boxes import quads2rboxes_numpy
+from ..utils.quads import quads2rboxes_numpy
 
 class Text2Number(object):
     def __init__(self, class_labels, blankIndex=None, ignore_nolabel=True, toLower=True):

@@ -2,7 +2,8 @@ import torch, types
 from torch import nn
 from torch.nn import functional as F
 
-from ..data.utils.boxes import dice, iou, dists2corners, poscreator_quads
+from ..data.utils.boxes import dice, iou, dists2corners
+from ..data.utils.quads import poscreator_quads
 from .utils import ohem
 
 class FOTSLoss(nn.Module):
