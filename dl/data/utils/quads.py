@@ -54,15 +54,31 @@ def poscreator_quads(quad, h, w, device):
     # img.show()
     return torch.from_numpy(np.array(img, dtype=np.bool)).to(device=device)
 
-def shrink_quads_numpy(reshaped_quads, ref_lengths, scale=0.3):
+def shrink_quads_numpy(quads, scale=0.3):
     """
     convert quads into rbox, see fig4 in EAST paper
+
+    Brief summary of rbox creation from quads
+
+    1. compute reference lengths (ref_lengths) by getting shorter edge adjacent one point
+    2. shrink longer edge pair* with scale value
+        *: longer pair is got by comparing between two opposing edges following;
+            (vertical edge1 + 2)ave <=> (horizontal edge1 + 2)ave
+        Note that shrinking way is different between vertical edges pair and horizontal one
+        horizontal: (x_i, y_i) += scale*(ref_lengths_i*cos + ref_lengths_(i mod 4 + 1)*sin)
+        vertical:   (x_i, y_i) += scale*(ref_lengths_i*sin + ref_lengths_(i mod 4 + 1)*cos)
+
     :param reshaped_quads: ndarray, shape = (box nums, 4=(clockwise from top-left), 2=(x,y))
     :param ref_lengths: ndarray, shape = (box nums, 4)
     :param scale: int, shrink scale
-    :return: rboxes: ndarray, shape = (box nums, 4=(clockwise from top-left), 2=(x, y))
+    :return: shrinked_quads: ndarray, shape = (box nums, 8=(x1,y1,...clockwise order))
     """
-    assert reshaped_quads.shape[-2:] == (4, 2), "reshaped_quads' shape must be (box nums, 4, 2)"
+    reshaped_quads = quads.reshape((-1, 4, 2))
+
+    # reference lengths, clockwise from horizontal top edge
+    # shape = (box nums, 4)
+    ref_lengths = np.minimum(np.linalg.norm(reshaped_quads - np.roll(reshaped_quads, 1, axis=1), axis=-1),
+                             np.linalg.norm(reshaped_quads - np.roll(reshaped_quads, -1, axis=1), axis=-1))
 
     def _shrink_h(quad, ref_len):
         """
@@ -126,48 +142,59 @@ def shrink_quads_numpy(reshaped_quads, ref_lengths, scale=0.3):
     horizontal_firsts = h_lens > v_lens
 
     shrinked_quads = np.array([_shrink(reshaped_quads[b], ref_lengths[b], horizontal_firsts[b]) for b in range(box_nums)])
-    return shrinked_quads
+    return shrinked_quads.reshape((-1, 8))
 
 
 
-def quads2rboxes_numpy(quads, scale):
+def quads2rboxes_numpy(quads, angle_mode='symmetry'):
     """
     convert quads into rbox, see fig4 in EAST paper
     https://github.com/Masao-Taketani/FOTS_OCR/blob/5c214bf2e3d815d6f826f7771da92ba4d899d08b/data_provider/data_utils.py#L575
 
-    Brief summary of rbox creation from quads
-
-    1. compute reference lengths (ref_lengths) by getting shorter edge adjacent one point
-    2. shrink longer edge pair* with scale value
-        *: longer pair is got by comparing between two opposing edges following;
-            (vertical edge1 + 2)ave <=> (horizontal edge1 + 2)ave
-        Note that shrinking way is different between vertical edges pair and horizontal one
-        horizontal: (x_i, y_i) += scale*(ref_lengths_i*cos + ref_lengths_(i mod 4 + 1)*sin)
-        vertical:   (x_i, y_i) += scale*(ref_lengths_i*sin + ref_lengths_(i mod 4 + 1)*cos)
-    3. create minimum rectangle surrounding quads points and angle. these values are created by opencv's minAreaRect
+    1. create minimum rectangle surrounding quads points and angle. these values are created by opencv's minAreaRect
 
     :param quads: ndarray, shape = (box nums, 8)
-    :param scale: int, shrink scale
+    :param angle_mode: str, 'x-anticlock', 'y-clock', 'symmetry'
     :return: rboxes: ndarray, shape=(box nums, 9=(8=(x1,y1,...clockwise order)+1=(angle))
+    Note that angle is between
+        [-pi/2, 0) anti-clockwise angle from x-axis (same as opencv output) if angle_mode='x-anticlock'
+        [0, pi/2) clockwise angle from y-axis if angle_mode='y-clock'
+        [-pi/4, pi/4) this mode may be useful for sigmoid output? if angle_mode='symmetry'
     """
     reshaped_quads = quads.reshape((-1, 4, 2))
 
-    # reference lengths, clockwise from horizontal top edge
-    # shape = (box nums, 4)
-    ref_lengths = np.minimum(np.linalg.norm(reshaped_quads - np.roll(reshaped_quads, 1, axis=1), axis=-1),
-                             np.linalg.norm(reshaped_quads - np.roll(reshaped_quads, -1, axis=1), axis=-1))
-
-    shrinked_quads = shrink_quads_numpy(reshaped_quads, ref_lengths, scale)
-
     box_nums = reshaped_quads.shape[0]
     rboxes = np.zeros((box_nums, 9))  # 9=(8=(x1,y1,...clockwise order)+1=(angle))
-    rboxes[:, :8] = shrinked_quads.reshape((-1, 8))
+
     for b in range(box_nums):
-        rect = cv2.minAreaRect(reshaped_quads[b].astype(np.int))
-        _, _, angle = rect
-        # box = cv2.boxPoints(rect)
-        angle += 90 - 45
+        rect = cv2.minAreaRect(reshaped_quads[b])
+        angle = rect[-1]
+        # shape = (4, 2)
+        # clockwise from ymax point: https://stackoverflow.com/questions/29739411/what-does-cv2-cv-boxpointsrect-return/51952289
+        box = cv2.boxPoints(rect)
+
+        if angle == -90:
+            # horizontal and vertical lines are parallel to x-axis and y-axis respectively
+            # box is clockwise order from bottom-right, i.e. index 0 is bottom-right
+            shift = 2
+        elif angle < -45:
+            # box is clockwise order from bottom-right, i.e. index 0 is bottom-right
+            shift = 2
+        else:
+            # box is clockwise order from bottom-left, i.e. index 0 is bottom-left
+            shift = 1
+
+        rboxes[b, :8] = np.roll(box, shift, axis=0).reshape(8)
+
         angle = np.deg2rad(angle)
-        rboxes[b, -1] = angle
+        if angle_mode == 'x-anticlock':
+            rboxes[b, -1] = angle
+        elif angle_mode == 'y-clock':
+            rboxes[b, -1] = angle + np.pi/2
+        elif angle_mode == 'symmetry':
+            # the reason of below process is https://github.com/argman/EAST/issues/210
+            # I think this process may be useful for sigmoid output?
+            angle += np.pi/2
+            rboxes[b, -1] = angle if angle < np.pi/4 else -(np.pi/2 - angle)
 
     return rboxes

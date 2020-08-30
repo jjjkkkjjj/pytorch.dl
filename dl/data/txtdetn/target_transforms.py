@@ -151,27 +151,15 @@ class ToQuadrilateral(object):
         return (labels, bboxes, flags, quads.reshape((-1, 8)), texts)
 
 class ToRBox(object):
-    """
-    convert quads into rbox, see fig4 in EAST paper
-    https://github.com/Masao-Taketani/FOTS_OCR/blob/5c214bf2e3d815d6f826f7771da92ba4d899d08b/data_provider/data_utils.py#L575
-
-    Brief summary of rbox creation from quads
-
-    1. compute reference lengths (ref_lengths) by getting shorter edge adjacent one point
-    2. shrink longer edge pair* with scale value
-        *: longer pair is got by comparing between two opposing edges following;
-            (vertical edge1 + 2)ave <=> (horizontal edge1 + 2)ave
-        Note that shrinking way is different between vertical edges pair and horizontal one
-        horizontal: (x_i, y_i) += scale*(ref_lengths_i*cos + ref_lengths_(i mod 4 + 1)*sin)
-        vertical:   (x_i, y_i) += scale*(ref_lengths_i*sin + ref_lengths_(i mod 4 + 1)*cos)
-    3. create minimum rectangle surrounding quads points and angle. these values are created by opencv's minAreaRect
-
-    """
-    def __init__(self, scale=0.3):
+    def __init__(self, angle_mode='symmetry'):
         """
-        :param scale: int, shrink scale
+        :param angle_mode: str, 'x-anticlock', 'y-clock', 'symmetry'
+        Note that angle is between
+            [-pi/2, 0) anti-clockwise angle from x-axis (same as opencv output) if angle_mode='x-anticlock'
+            [0, pi/2) clockwise angle from y-axis if angle_mode='y-clock'
+            [-pi/4, pi/4) this mode may be useful for sigmoid output? if angle_mode='symmetry'
         """
-        self._scale = scale
+        self._angle_mode = angle_mode
 
     def __call__(self, labels, bboxes, flags, quads, texts):
-        return (labels, bboxes, flags, quads2rboxes_numpy(quads, self._scale), texts)
+        return (labels, bboxes, flags, quads2rboxes_numpy(quads, self._angle_mode), texts)
