@@ -279,11 +279,11 @@ def minmax2corners_numpy(a):
 
 def dists2corners(a):
     """
-    :param a: dist Tensor, shape = (*, h, w, 4=(t, l, b, r))
+    :param a: dist Tensor, shape = (*, h, w, 4=(t, r, b, l))
     :return:
         a: Box Tensor, shape is (*, h, w, 4=(xmin, ymin, xmax, ymax))
     """
-    assert a.ndim > 3, 'must be greater than 3d'
+    assert a.ndim >= 3, 'must be greater than 3d'
     h, w, _ = a.shape[-3:]
     device = a.device
     # shape = (*, h, w, 4=(xmin, ymin, xmax, ymax))
@@ -294,7 +294,7 @@ def dists2corners(a):
     heights = heights.to(device)
     widths = widths.to(device)
 
-    widths, lefts, rights = torch.broadcast_tensors(widths, a[..., 1], a[..., 3])
+    widths, rights, lefts = torch.broadcast_tensors(widths, a[..., 1], a[..., 3])
     heights, tops, bottoms = torch.broadcast_tensors(heights, a[..., 0], a[..., 2])
     xmin = (widths - lefts).unsqueeze(-1) # xmin
     ymin = (heights - tops).unsqueeze(-1) # ymin
@@ -306,6 +306,62 @@ def dists2corners(a):
 
     return ret
 
+def dists2corners_numpy(a):
+    """
+    :param a: dist ndarray, shape = (*, h, w, 4=(t, r, b, l))
+    :return:
+        a: Box ndarray, shape is (*, h, w, 4=(xmin, ymin, xmax, ymax))
+    """
+    assert a.ndim >= 3, 'must be greater than 3d'
+    h, w, _ = a.shape[-3:]
+
+    # shape = (*, h, w, 4=(xmin, ymin, xmax, ymax))
+    ret = np.zeros_like(a)
+
+    widths, heights = np.meshgrid(np.arange(w), np.arange(h))
+    # shape = (h, w, 1)
+    widths, rights, lefts = np.broadcast_arrays(widths, a[..., 1], a[..., 3])
+    heights, tops, bottoms = np.broadcast_arrays(heights, a[..., 0], a[..., 2])
+    xmin = np.expand_dims(widths - lefts, axis=-1) # xmin
+    ymin = np.expand_dims(heights - tops, axis=-1) # ymin
+    xmax = np.expand_dims(widths + rights, axis=-1) # xmax
+    ymax = np.expand_dims(heights + bottoms, axis=-1) # ymax
+
+    ret[..., ::2] = np.clip(np.concatenate((xmin, xmax), axis=-1), 0, w)
+    ret[..., 1::2] = np.clip(np.concatenate((ymin, ymax), axis=-1), 0, h)
+
+    return ret
+
+def dists_pt2line_numpy(line_pt1, line_pt2, pt):
+    """
+    :param line_pt1: ndarray, shape = (*, 2)
+    :param line_pt2: ndarray, shape = (*, 2)
+    :param pt: ndarray, shape = (..., 2)
+    :return: distances: ndarray, shape = (..., *)
+    """
+    assert line_pt1.shape == line_pt2.shape, "shape of line_pt1 and line_pt2 must be same, but got {} and {}".format(line_pt1.shape, line_pt2.shape)
+    assert line_pt1.shape[-1] == pt.shape[-1] == 2, "last dimension must be 2"
+
+    # convert shape for broadcasting
+    # >>> a=np.arange(216*2).reshape(2,3,6,3,2,2)
+    # >>> b=np.arange(5*2).reshape(5,2)
+    # >>> np.expand_dims(b, (0,1,2,3,4)).shape
+    # (1, 1, 1, 1, 1, 5, 2)
+    # >>> np.expand_dims(b, (-2,-3,-4,-5,-6)).shape
+    # (5, 1, 1, 1, 1, 1, 2)
+
+    line_dim = line_pt1.ndim - 1
+    # shape = (..., (1,...,1)=line_dim, 2)
+    broadcasted_pt = np.expand_dims(pt, axis=tuple(i for i in range(-2, -(2+line_dim), -1)))
+
+    pt_dim = pt.ndim - 1
+    # shape = ((1,...,1)=pt_dim, *, 2)
+    broadcasted_line_pt1 = np.expand_dims(line_pt1, axis=tuple(i for i in range(0, pt_dim)))
+    broadcasted_line_pt2 = np.expand_dims(line_pt2, axis=tuple(i for i in range(0, pt_dim)))
+
+    # note that np.cross returns scalar value with shape = (..., *)
+    return np.abs(np.cross(broadcasted_line_pt2 - broadcasted_line_pt1, broadcasted_line_pt1 - broadcasted_pt)) \
+           / np.linalg.norm(broadcasted_line_pt2 - broadcasted_line_pt1, axis=-1)
 
 """
 repeat_interleave is similar to numpy.repeat
