@@ -10,11 +10,10 @@ class RoIRotate(Module):
         self.height = height
         self._debug = _debug
 
-    def forward(self, fmaps, pred_locs, true_locs):
+    def forward(self, fmaps, true_quads):
         """
         :param fmaps: feature maps Tensor, shape = (b, c, h/4, w/4)
-        :param pred_locs: predicted Tensor, shape = (b, h/4, w/4, 6=(conf, t, l, b, r, angle))
-        :param true_locs: list(b) of tensor, shape = (text number, 4=(xmin, ymin, xmax, ymax)+8=(x1, y1,...)+1=angle))
+        :param true_quads: list(b) of Tensor, shape = (text number, 8=(x1, y1,...)))
         :return:
             ret_rotated_features: list(b) of Tensor, shape = (text nums, c, height=8, non-fixed width)
             ret_true_angles: list(b) of Tensor, shape = (text nums,)
@@ -22,14 +21,26 @@ class RoIRotate(Module):
         device = fmaps.device
         batch_nums, c, h, w = fmaps.shape
 
-        distances, angles = pred_locs[:, 1:5], pred_locs[:, 5:]
-
         ret_rotated_features = []
         for b in range(batch_nums):
             images = []
             widths = []
             matrices = []
 
+            quads = true_quads[b].cpu().numpy()
+            quads[:, ::2] *= w
+            quads[:, 1::2] *= h
+
+            textnums = quads.shape[0]
+            for t in range(textnums):
+                img = fmaps[b]
+                quad = quads[t].reshape((4, 2))
+                tl, tr, bl, br = quad
+
+                # minAreaRect returns center_point, size, angle(deg)
+                _, size, _ = cv2.minAreaRect(quad)
+                box_w, box_h = size
+                """
             bboxes, quads = true_locs[b][:, :4].cpu().numpy(), true_locs[b][:, 4:12].cpu().numpy()
             bboxes[:, ::2] *= w
             bboxes[:, 1::2] *= h
@@ -45,7 +56,7 @@ class RoIRotate(Module):
                 # minAreaRect returns center_point, size, angle(deg)
                 _, size, _ = cv2.minAreaRect(quad)
                 box_w, box_h = size
-
+                """
                 # minAreaRect calculates angle for longer side
                 # https://stackoverflow.com/questions/15956124/minarearect-angles-unsure-about-the-angle-returned/21427814#21427814
                 if box_w <= box_h:
