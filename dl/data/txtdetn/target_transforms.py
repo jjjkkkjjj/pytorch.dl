@@ -174,26 +174,21 @@ class ShrinkQuadrilateral(object):
         return (labels, bboxes, flags, shrink_quads_numpy(quads, self._scale), texts)
 
 class ToRBox(object):
-    def __init__(self, w, h, angle_mode='symmetry', shrink_scale=0.3):
+    def __init__(self, w, h, shrink_scale=0.3):
         """
         :param w: int
         :param h: int
-        :param angle_mode: str, 'x-anticlock', 'y-clock', 'symmetry'
-            Note that angle is between
-                [-pi/2, 0) anti-clockwise angle from x-axis (same as opencv output) if angle_mode='x-anticlock'
-                [0, pi/2) clockwise angle from y-axis if angle_mode='y-clock'
-                [-pi/4, pi/4) this mode may be useful for sigmoid output? if angle_mode='symmetry'
         :param shrink_scale: None or int, use raw quads to calculate dists if None or 1, use shrinked ones otherwise
+            Note that angle is between [-pi/4, pi/4)
         """
         self._w = w
         self._h = h
-        self._angle_mode = angle_mode
         self._scale = shrink_scale
 
     def __call__(self, labels, bboxes, flags, quads, texts):
         assert quads.shape[1] == 8, '4th arguments must be quadrilateral points'
         # pos, shape = (h, w)
         # rbox, shape = (h, w, 5)
-        pos, rbox = quads2rboxes_numpy(quads, self._w, self._h, self._angle_mode, self._scale)
+        pos, rbox = quads2rboxes_numpy(quads, self._w, self._h, self._scale)
         # returned shape = (h, w, 6=(1=pos + 4=(t,r,b,l) + 1=angle))
         return (labels, bboxes, flags, np.concatenate((np.expand_dims(pos, axis=-1), rbox), axis=-1), texts)

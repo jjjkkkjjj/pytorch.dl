@@ -3,7 +3,7 @@ from PIL import Image, ImageDraw
 import numpy as np
 from shapely.geometry import Polygon, MultiPoint, MultiPolygon
 
-from .boxes import dists_pt2line_numpy
+from .boxes import dists_pt2line_numpy, dists2corners_numpy
 
 # ref: https://github.com/MhLiao/TextBoxes_plusplus/blob/master/examples/text/nms.py
 def quads_iou(a, b):
@@ -39,22 +39,31 @@ def quads_iou(a, b):
 
     return torch.from_numpy(ret)
 
-def poscreator_quads(quad, h, w, device):
+def quad2mask(quad, w, h, device):
     """
     :param quad: Tensor, shape = (8=(x1,y1,...))
-    :param h: int
     :param w: int
+    :param h: int
     :param device: device
-    :return: mask_per_rect: Bool Tensor, shape = (h/4, w/4)
+    :return: mask_per_rect: Bool Tensor, shape = (h, w)
     """
-    _quad = quad.clone() # avoid in-place operation
+    return torch.from_numpy(quad2mask_numpy(quad.numpy(), w, h)).to(device=device)
+
+def quad2mask_numpy(quad, w, h):
+    """
+    :param quad: ndarray, shape = (8=(x1,y1,...))
+    :param w: int
+    :param h: int
+    :return: mask_per_rect: Bool ndarray, shape = (h, w)
+    """
+    _quad = quad.copy()
     _quad[::2] *= w
     _quad[1::2] *= h
 
     img = Image.new('L', (w, h), 0)
-    ImageDraw.Draw(img).polygon(_quad.cpu().numpy(), outline=255, fill=255)
+    ImageDraw.Draw(img).polygon(_quad, outline=255, fill=255)
     # img.show()
-    return torch.from_numpy(np.array(img, dtype=np.bool)).to(device=device)
+    return np.array(img, dtype=np.bool)
 
 def shrink_quads_numpy(quads, scale=0.3):
     """
@@ -147,7 +156,7 @@ def shrink_quads_numpy(quads, scale=0.3):
 
 
 
-def quads2rboxes_numpy(quads, w, h, angle_mode='symmetry', shrink_scale=0.3):
+def quads2rboxes_numpy(quads, w, h, shrink_scale=0.3):
     """
     convert quads into rbox, see fig4 in EAST paper
     https://github.com/Masao-Taketani/FOTS_OCR/blob/5c214bf2e3d815d6f826f7771da92ba4d899d08b/data_provider/data_utils.py#L575
@@ -157,15 +166,11 @@ def quads2rboxes_numpy(quads, w, h, angle_mode='symmetry', shrink_scale=0.3):
     :param quads: ndarray, shape = (box nums, 8)
     :param w: int
     :param h: int
-    :param angle_mode: str, 'x-anticlock', 'y-clock', 'symmetry'
     :param shrink_scale: None or int, use raw quads to calculate dists if None or 1, use shrinked ones otherwise
     :returns:
         pos: ndarray, shape = (h, w)
         rbox: ndarray, shape=(h, w, 5=(4=(t, r, b, l)+1=(angle))
-            Note that angle is between
-                [-pi/2, 0) anti-clockwise angle from x-axis (same as opencv output) if angle_mode='x-anticlock'
-                [0, pi/2) clockwise angle from y-axis if angle_mode='y-clock'
-                [-pi/4, pi/4) this mode may be useful for sigmoid output? if angle_mode='symmetry'
+            Note that angle is between [-pi/4, pi/4)
     """
     reshaped_quads = quads.reshape((-1, 4, 2)).copy()
 
@@ -183,26 +188,31 @@ def quads2rboxes_numpy(quads, w, h, angle_mode='symmetry', shrink_scale=0.3):
         shrunk_quads = shrink_quads_numpy(reshaped_quads.reshape(-1, 8).copy(), shrink_scale)
     else:
         shrunk_quads = reshaped_quads.reshape(-1, 8).copy()
+    shrunk_quads[:, ::2] /= w
+    shrunk_quads[:, 1::2] /= h
 
     for b in range(box_nums):
         rect = cv2.minAreaRect(reshaped_quads[b])
-        angle = rect[-1]
+        # note that angle range is (0, 90]
+        angle = -rect[-1]
 
         # shape = (4, 2)
         # clockwise from ymax point: https://stackoverflow.com/questions/29739411/what-does-cv2-cv-boxpointsrect-return/51952289
         box_4pts = cv2.boxPoints(rect)
 
         # shift box_4pts for clockwise order from top-left
-        if angle == -90:
+        # and convert angle range into [0, 90)
+        if angle == 90:
+            angle = 0
             # horizontal and vertical lines are parallel to x-axis and y-axis respectively
             # box is clockwise order from bottom-right, i.e. index 0 is bottom-right
             shift = -2
-        elif angle < -45:
-            # box is clockwise order from bottom-right, i.e. index 0 is bottom-right
-            shift = -2
-        else:
+        elif angle < 45:
             # box is clockwise order from bottom-left, i.e. index 0 is bottom-left
             shift = -1
+        else:
+            # box is clockwise order from bottom-right, i.e. index 0 is bottom-right
+            shift = -2
         box_4pts = np.roll(box_4pts, shift, axis=0)
 
         # compute distance from each point
@@ -214,30 +224,92 @@ def quads2rboxes_numpy(quads, w, h, angle_mode='symmetry', shrink_scale=0.3):
         # array([1, 0])
         widths, heights = np.meshgrid(np.arange(w), np.arange(h))
         # shape = (h, w, 2)
-        pts = np.concatenate((np.expand_dims(widths, -1), np.expand_dims(heights, -1)), axis=-1)
+        origins = np.concatenate((np.expand_dims(widths, -1), np.expand_dims(heights, -1)), axis=-1)
         # shape = (h, w, 4=(t,r,b,l))
-        dists = dists_pt2line_numpy(box_4pts, np.roll(box_4pts, -1, axis=0), pts)
+        dists = dists_pt2line_numpy(box_4pts, np.roll(box_4pts, -1, axis=0), origins)
 
         # compute pos
         shrunk_quad = shrunk_quads[b]
-
-        mask = Image.new('L', (w, h), 0)
-        ImageDraw.Draw(mask).polygon(shrunk_quad, outline=255, fill=255)
-        mask = np.array(mask, dtype=np.bool)
-
+        mask = quad2mask_numpy(shrunk_quad, w, h)
         pos = np.logical_or(pos, mask)
+
         # assign dists
         rbox[mask, :4] = dists[mask]
         # assign angle
-        angle = np.deg2rad(angle)
-        if angle_mode == 'x-anticlock':
-            rbox[mask, -1] = angle
-        elif angle_mode == 'y-clock':
-            rbox[mask, -1] = angle + np.pi / 2
-        elif angle_mode == 'symmetry':
-            # the reason of below process is https://github.com/argman/EAST/issues/210
-            # I think this process may be useful for sigmoid output?
-            angle += np.pi / 2
-            rbox[mask, -1] = angle if angle < np.pi / 4 else -(np.pi / 2 - angle)
+        # the reason of below process is https://github.com/argman/EAST/issues/210
+        angle = angle if angle < 45 else -(90 - angle)
+        rbox[mask, -1] = np.deg2rad(angle)
+
 
     return pos, rbox
+
+#ref https://github.com/Masao-Taketani/FOTS_OCR/blob/5c214bf2e3d815d6f826f7771da92ba4d899d08b/data_provider/data_utils.py#L498
+def rboxes2quads_numpy(rboxes):
+    """
+    :param rboxes: ndarray, shape = (*, h, w, 5=(4=(t,r,b,l) + 1=angle))
+        Note that angle is between [-pi/4, pi/4)
+    :return: quads: ndarray, shape = (*, h, w, 8=(x1, y1,... clockwise order from top-left))
+    """
+    # dists, shape = (*, h, w, 4=(t,r,b,l))
+    # angles, shape = (*, h, w)
+    h, w, _ = rboxes.shape[-3:]
+    dists, angles = rboxes[..., :4], rboxes[..., 4]
+
+    # shape = (*, h, w, 5=(t,r,b,l,offset), 2=(x,y))
+    pts = np.zeros(list(dists.shape[:-1]) + [5, 2])
+
+    # assign pts for angle >= 0
+    dists_pos = dists[angles >= 0]
+    if dists_pos.size > 0:
+        # shape = (*, h, w)
+        tops, rights, bottoms, lefts = np.rollaxis(dists_pos, axis=-1)
+        shape = tops.shape
+        pts[angles >= 0] = np.moveaxis(np.array([[np.zeros(shape), -(tops+bottoms)],
+                                                 [lefts+rights, -(tops+bottoms)],
+                                                 [lefts+rights, np.zeros(shape)],
+                                                 [np.zeros(shape), np.zeros(shape)],
+                                                 [lefts, -bottoms]]), [0, 1], [-2, -1])
+
+    # assign pts for angle < 0
+    dists_neg = dists[angles < 0]
+    if dists_neg.size > 0:
+        # shape = (*, h, w)
+        tops, rights, bottoms, lefts = np.rollaxis(dists_neg, axis=-1)
+        shape = tops.shape
+        pts[angles < 0] = np.moveaxis(np.array([[-(lefts+rights), -(tops+bottoms)],
+                                                [np.zeros(shape), -(tops+bottoms)],
+                                                [np.zeros(shape), np.zeros(shape)],
+                                                [-(lefts+rights), np.zeros(shape)],
+                                                [-rights, -bottoms]]), [0, 1], [-2, -1])
+
+    # note that rotate clockwise is positive, otherwise, negative
+    angles *= -1
+
+    # rotate
+    # shape = (*, h, w, 2, 2)
+    R = np.moveaxis(np.array([[np.cos(angles), -np.sin(angles)],
+                              [np.sin(angles), np.cos(angles)]]), [0, 1], [-2, -1])
+    # shape = (*, h, w, 2=(x, y), 5=(t,r,b,l,offset))
+    pts = np.swapaxes(pts, -1, -2)
+    # shape = (*, h, w, 2=(x, y), 5=(t,r,b,l,offset))
+    rotated_pts = R @ pts
+
+    # quads, shape = (*, h, w, 2=(x, y), 4=(t,r,b,l))
+    # offsets, shape = (*, h, w, 2=(x, y), 1=(offset))
+    quads, offsets = rotated_pts[..., :4], rotated_pts[..., 4:5]
+
+    # align
+    widths, heights = np.meshgrid(np.arange(w), np.arange(h))
+    # shape = (h, w, 2)
+    origins = np.concatenate((np.expand_dims(widths, -1), np.expand_dims(heights, -1)), axis=-1)
+    # shape = (*, h, w, 2=(x,y), 1)
+    origins = np.expand_dims(origins, axis=tuple(i for i in range(-1, rboxes.ndim - 3)))
+    quads += origins - offsets
+
+    quads[..., 0, :] = np.clip(quads[..., 0, :], 0, w)
+    quads[..., 1, :] = np.clip(quads[..., 1, :], 0, h)
+
+    # reshape
+    quads = np.swapaxes(quads, -1, -2).reshape(list(rboxes.shape[:-1]) + [8])
+
+    return quads
