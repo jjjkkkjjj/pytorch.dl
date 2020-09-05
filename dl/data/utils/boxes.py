@@ -85,6 +85,39 @@ def iou_numpy(a, b):
 
     return intersectionArea / (A + B - intersectionArea)
 
+def iou_dists(a, b):
+    """
+    :param a: dists Tensor, shape is (*, 4=(t,r,b,l))
+    :param b: dists Tensor, shape is (*, 4=(t,r,b,l))
+    :return:
+        iou: Tensor, shape is (*,)
+             formula is
+             iou = intersection / union = intersection / (A + B - intersection)
+    """
+    assert a.shape == b.shape, "must be same shape, but fot {} and {}".format(a.shape, b.shape)
+    A, B = (a[..., 0] + a[..., 2])*(a[..., 1] + a[..., 3]), (b[..., 0] + b[..., 2])*(b[..., 1] + b[..., 3])
+    intersects = torch.min(a, b)
+    intersectionArea = (intersects[..., 0] + intersects[..., 2])*(intersects[..., 1] + intersects[..., 3])
+
+    return intersectionArea / (A + B - intersectionArea)
+
+
+def iou_dists_numpy(a, b):
+    """
+    :param a: dists ndarray, shape is (*, 4=(t,r,b,l))
+    :param b: dists ndarray, shape is (*, 4=(t,r,b,l))
+    :return:
+        iou: ndarray, shape is (*,)
+             formula is
+             iou = intersection / union = intersection / (A + B - intersection)
+    """
+    assert a.shape == b.shape, "must be same shape, but fot {} and {}".format(a.shape, b.shape)
+    A, B = (a[..., 0] + a[..., 2]) * (a[..., 1] + a[..., 3]), (b[..., 0] + b[..., 2]) * (b[..., 1] + b[..., 3])
+    intersects = np.minimum(a, b)
+    intersectionArea = (intersects[..., 0] + intersects[..., 2]) * (intersects[..., 1] + intersects[..., 3])
+
+    return intersectionArea / (A + B - intersectionArea)
+
 def dice(a, b):
     """
     :param a: Box Tensor, shape is (nums, 4)

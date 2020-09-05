@@ -2,8 +2,8 @@ import torch, types
 from torch import nn
 from torch.nn import functional as F
 
-from ..data.utils.boxes import dice, iou, dists2corners
-from ..data.utils.quads import poscreator_quads
+from ..data.utils.boxes import dice, iou, dists2corners, iou_dists
+from ..data.utils.quads import quad2mask
 from .utils import ohem
 
 class FOTSLoss(nn.Module):
@@ -21,12 +21,12 @@ class FOTSLoss(nn.Module):
     def forward(self, detn, recog):
         """
         :param detn:
-                pos_indicator: bool Tensor, shape = (b, c, h/4, w/4)
-                pred_confs: confidence Tensor, shape = (b, 1, h/4, w/4)
-                pred_locs: predicted Tensor, shape = (b, 5=(conf, t, l, b, r, angle), h/4, w/4)
-                    distances: distances Tensor, shape = (b, 4=(t, l, b, r), h/4, w/4) for each pixel to target rectangle boundaries
-                    angle: angle Tensor, shape = (b, 1, h/4, w/4)
-                true_locs: list(b) of tensor, shape = (text number, 4=(xmin, ymin, xmax, ymax)+8=(x1, y1,...)+1=angle))
+                pos_indicator: bool Tensor, shape = (b, h/4, w/4)
+                pred_confs: confidence Tensor, shape = (b, h/4, w/4, 1)
+                pred_rboxes: predicted Tensor, shape = (b, h/4, w/4, 5=(t, r, b, l, angle))
+                    distances: distances Tensor, shape = (b, h/4, w/4, 4=(t, r, b, l)) for each pixel to target rectangle boundaries
+                    angle: angle Tensor, shape = (b, h/4, w/4, 1)
+                true_rboxes: true Tensor, shape = (text b, h/4, w/4, 5=(t, r, b, l, angle))
         :param recog:
                 pred_texts: list(b) of predicted text number Tensor, shape = (times, text nums, class_nums)
                 true_texts: list(b) of true text number Tensor, shape = (true text nums, char nums)
@@ -54,26 +54,25 @@ class DetectionLoss(nn.Module):
         self.cls_loss = ClassificationLoss()
         self.reg_loss = RegressionLoss(theta_coef)
 
-    def forward(self, pos_indicator, pred_confs, pred_locs, true_locs):
+    def forward(self, pos_indicator, pred_confs, pred_rboxes, true_rboxes):
         """
         :param pos_indicator: bool Tensor, shape = (b, h/4, w/4)
         :param pred_confs: confidence Tensor, shape = (b, h/4, w/4, 1)
-        :param pred_locs: predicted Tensor, shape = (b, h/4, w/4, 5=(t, l, b, r, angle))
+        :param pred_rboxes: predicted Tensor, shape = (b, h/4, w/4, 5=(t, l, b, r, angle))
                     distances: distances Tensor, shape = (b, h/4, w/4, 4=(t, l, b, r)) for each pixel to target rectangle boundaries
                     angle: angle Tensor, shape = (b, h/4, w/4, 1)
-        :param true_locs: list(b) of tensor, shape = (text number, 4=(xmin, ymin, xmax, ymax)+8=(x1, y1,...)+1=angle))
+        :param true_rboxes: true Tensor, shape = (text b, h/4, w/4, 5=(t, r, b, l, angle))
         :return: loss: loss Tensor, shape = (b,)
         """
-        # convert distances into corners representation
-        pred_dists = pred_locs[..., :4]
-        pred_boxes = dists2corners(pred_dists)
-        pred_angles = pred_locs[..., -1:]
+        # get distances and angles
+        pred_dists = pred_rboxes[..., :4]
+        pred_angles = pred_rboxes[..., -1:]
 
-        true_rects = [t_loc[:, :12] for t_loc in true_locs]
-        true_angles = [t_loc[:, -1:] for t_loc in true_locs]
+        true_dists = true_rboxes[..., :4]
+        true_angles = true_rboxes[..., -1:]
 
         cls_loss = self.cls_loss(pos_indicator, pred_confs)
-        reg_loss = self.reg_loss(None, pred_confs, pred_boxes, true_rects, pred_angles, true_angles)
+        reg_loss = self.reg_loss(pos_indicator, pred_confs, pred_dists, true_dists, pred_angles, true_angles)
 
         return cls_loss + self.reg_coef * reg_loss
 
@@ -152,7 +151,7 @@ class RegressionLoss(nn.Module):
         self.hard_pos_num = hard_pos_num
         self.random_pos_num = random_pos_num
 
-    def forward(self, pos_indicator, pred_confs, pred_boxes, true_rects, pred_thetas, true_thetas):
+    def forward(self, pos_indicator, pred_confs, pred_dists, true_dists, pred_angles, true_angles):
         """
         :param pos_indicator: bool Tensor, shape = (b, h/4, w/4)
                               or None. if it's None, use pos_creater(t_quad, h, w)
@@ -161,80 +160,50 @@ class RegressionLoss(nn.Module):
                                 :param w: int
                                 :return mask_per_rect: Bool Tensor, shape = (h/4, w/4)
         :param pred_confs: confidence Tensor, shape = (b, h/4, w/4, 1)
-        :param pred_boxes: predicted boxes Tensor, shape = (b, h/4, w/4, 4=(xmin, ymin, xmax, ymax))
-        :param true_rects: true boxes list(b) of Tensor, shape = (text numbers, 4=(xmin, ymin, xmax, ymax)+8=(x1, y1,...))
-        :param pred_thetas: predicted angles Tensor, shape = (b, h/4, w/4, 1). range = (-pi/2, pi/2). unit is radian.
-        :param true_thetas: true angle list(b) of Tensor, shape = (text numbers, 1)
+        :param pred_dists: predicted distances Tensor, shape = (b, h/4, w/4, 4=(t,r,b,l))
+        :param true_dists: true distances Tensor, shape = (b, h/4, w/4, 4=(t,r,b,l))
+        :param pred_angles: predicted angles Tensor, shape = (b, h/4, w/4, 1). range = (-pi/4, pi/4). unit is radian.
+        :param true_angles: true angle Tensor, shape = (b, h/4, w/4, 1). range = [-pi/4, pi/2)
         :return: loss: loss Tensor, shape = (b,)
         """
-        device = pred_boxes.device
+        device = pred_dists.device
 
-        if pos_indicator:
-            raise ValueError('Not Supported')
-        else:
-            batch_nums, h, w, _ = pred_boxes.shape
-            loss = torch.zeros((batch_nums,), dtype=torch.float, device=device)
-            for b in range(batch_nums):
-                text_nums = true_rects[b].shape[0]
+        batch_nums, h, w, _ = pred_dists.shape
+        loss = torch.zeros((batch_nums,), dtype=torch.float, device=device)
+        for b in range(batch_nums):
+            mask = pos_indicator[b]
+            # shape=(masked number, 4=(t,r,b,l))
+            pos_p_dists = pred_dists[b][mask]
+            # shape=(masked number, 1)
+            pos_p_angles = pred_angles[b][mask]
+            # shape=(masked number, 1)
+            pos_p_confs = pred_confs[b][mask]
 
-                loc_loss = []
-                orient_loss = []
-                pos_confs = []
+            # shape=(masked number, 4=(t,r,b,l))
+            pos_t_dists = true_dists[b][mask]
+            # shape=(masked number, 1)
+            pos_t_angles = true_angles[b][mask]
 
-                for t in range(text_nums):
-                    t_quad = true_rects[b][t, 4:12]  # shape=(8,)
-                    t_box = true_rects[b][t, :4].unsqueeze(0)  # shape=(1,4) unsqueeze means for broadcast
-                    t_thetas = true_thetas[b][t, :].unsqueeze(0)  # shape=(1,1) unsqueeze means for broadcast
+            orient_loss = 1 - torch.cos(pos_p_angles - pos_t_angles)
+            loc_loss = iou_dists(pos_p_dists, pos_t_dists)
 
-                    # convert percentage representation into true box coordinates
-                    t_box = torch.cat((t_box[:, 0:1]*w, t_box[:, 1:2]*h, t_box[:, 2:3]*w, t_box[:, 3:4]*h), dim=-1)
-                    """
-                    mask = torch.zeros((batch_nums, h, w, 1), dtype=torch.bool, device=device)
+            # online hard example mining
+            hard_pos_indices, rand_pos_indices, sample_nums = ohem(pos_p_confs, hard_sample_nums=self.hard_pos_num,
+                                                                   random_sample_nums=self.random_pos_num)
+            hardn_loc_loss = loc_loss[hard_pos_indices]
+            hardn_orient_loss = orient_loss[hard_pos_indices]
 
-                    # shape = (h, w)
-                    pos = poscreator_quads(t_quad, h, w, device)
-                    mask[b, :, :, 0] = pos
+            if rand_pos_indices.numel() > 0:
+                # random positive
+                hardnrand_loc_loss = loc_loss[rand_pos_indices]
+                hardnrand_orient_loss = orient_loss[rand_pos_indices]
+                loss[b] = ((hardn_loc_loss.sum() + hardnrand_loc_loss.sum()) +
+                           self.theta_coef * (hardn_orient_loss.sum() + hardnrand_orient_loss.sum())) / sample_nums
 
-                    p_boxes = pred_boxes.masked_select(mask).reshape(-1, 4)  # shape=(masked number, 4)
-                    p_thetas = pred_thetas.masked_select(mask).reshape(-1, 1)  # shape=(masked number, 1)
-                    """
-                    mask = poscreator_quads(t_quad, h, w, device)
-                    p_boxes = pred_boxes[b][mask] # shape=(masked number, 4)
-                    p_thetas = pred_thetas[b][mask] # shape=(masked number, 1)
-                    p_confs = pred_confs[b][mask] # shape = (masked number, 1)
+            else:
+                loss[b] = (hardn_loc_loss.sum() + self.theta_coef * hardn_orient_loss.sum()) / sample_nums
 
-                    # calculate loss for each true text box
-                    # iou's shape = (masked number, 1)
-                    loc_loss += [iou(p_boxes, t_box)]
-                    # cosine_similarity's shape = (masked number,)
-                    # convert to (masked number, 1)
-                    # p_thetas is between [-pi/2, pi/2]
-                    orient_loss += [1 - torch.cos(p_thetas - t_thetas)]
-
-                    pos_confs += [p_confs]
-
-                # convert list into tensor, shape = (pos num, 1)
-                loc_loss = torch.cat(loc_loss, dim=0)
-                orient_loss = torch.cat(orient_loss, dim=0)
-                pos_confs = torch.cat(pos_confs, dim=0)
-
-                # online hard example mining
-                hard_pos_indices, rand_pos_indices, sample_nums = ohem(pos_confs, hard_sample_nums=self.hard_pos_num,
-                                                                       random_sample_nums=self.random_pos_num)
-                hardn_loc_loss = loc_loss[hard_pos_indices]
-                hardn_orient_loss = orient_loss[hard_pos_indices]
-
-                if rand_pos_indices.numel() > 0:
-                    # random positive
-                    hardnrand_loc_loss = loc_loss[rand_pos_indices]
-                    hardnrand_orient_loss = orient_loss[rand_pos_indices]
-                    loss[b] = ((hardn_loc_loss.sum() + hardnrand_loc_loss.sum()) +
-                               self.theta_coef * (hardn_orient_loss.sum() + hardnrand_orient_loss.sum())) / sample_nums
-
-                else:
-                    loss[b] = (hardn_loc_loss.sum() + self.theta_coef * hardn_orient_loss.sum()) / sample_nums
-
-            return loss
+        return loss
 
 class RecognitionLoss(nn.Module):
     def __init__(self, blankIndex=0):

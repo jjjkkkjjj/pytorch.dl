@@ -16,7 +16,7 @@ class DetectorBase(nn.Module):
     pass
 
 class FOTSBase(TextSpottingModelBase):
-    def __init__(self, chars, input_shape):
+    def __init__(self, chars, input_shape, shrink_scale=0.3):
         super().__init__(chars, input_shape)
 
         self.feature_extractor = _check_retval('build_feature_extractor', self.build_feature_extractor(), FeatureExtractorBase)
@@ -24,6 +24,8 @@ class FOTSBase(TextSpottingModelBase):
 
         self.roi_rotate = RoIRotate()
         self.recognizer = _check_retval('build_recognizer', self.build_recognizer(), CRNNBase)
+
+        self._shrink_scale = shrink_scale
 
     @abc.abstractmethod
     def build_feature_extractor(self):
@@ -47,10 +49,10 @@ class FOTSBase(TextSpottingModelBase):
             detn:
                 pos_indicator: bool Tensor, shape = (b, h/4, w/4)
                 pred_confs: confidence Tensor, shape = (b, h/4, w/4, 1)
-                pred_locs: predicted Tensor, shape = (b, h/4, w/4, 5=(t, l, b, r, angle))
-                    distances: distances Tensor, shape = (b, h/4, w/4, 4=(t, l, b, r)) for each pixel to target rectangle boundaries
+                pred_rboxes: predicted Tensor, shape = (b, h/4, w/4, 5=(t, r, b, l, angle))
+                    distances: distances Tensor, shape = (b, h/4, w/4, 4=(t, r, b, l)) for each pixel to target rectangle boundaries
                     angle: angle Tensor, shape = (b, h/4, w/4, 1)
-                true_locs: list(b) of tensor, shape = (text number, 4=(xmin, ymin, xmax, ymax)+8=(x1, y1,...)+1=angle))
+                true_rboxes: true Tensor, shape = (text b, h/4, w/4, 5=(t, r, b, l, angle))
             recog:
                 pred_texts: list(b) of predicted text number Tensor, shape = (times, text nums, class_nums)
                 true_texts: list(b) of true text number Tensor, shape = (true text nums, char nums)
@@ -66,14 +68,19 @@ class FOTSBase(TextSpottingModelBase):
         # detection branch
         fmaps = self.feature_extractor(x)
         #  predicts: predicted Tensor, shape = (b, 6=(conf, t, l, b, r, angle), h/4, w/4)
-        pred_confs, pred_locs = self.detector(fmaps)
+        pred_confs, pred_rboxes = self.detector(fmaps)
 
         if self.training:
-            pos_indicator, true_locs = matching_strategy(fmaps, labels)
+            # create pos_indicator and rboxes from label
+            _, _, h, w = fmaps.shape
+            device = fmaps.device
+            pos_indicator, true_rboxes = matching_strategy(labels, w, h, device, scale=self._shrink_scale)
 
             # RoI Rotate Branch
             # list(b) of Tensor, shape = (text nums, c, height=8, non-fixed width)
-            rotated_features = self.roi_rotate(fmaps, pred_locs, true_locs)
+            true_quads = [l[:, 4:12] for l in labels]
+            rotated_features = self.roi_rotate(fmaps, true_quads)
+
 
             # recognition branch
             pred_texts, true_texts, pred_txtlens, true_txtlens = [], [], [], []
@@ -85,7 +92,7 @@ class FOTSBase(TextSpottingModelBase):
                 pred_txtlens += [pred_lengths]
                 true_txtlens += [t_lengths]
 
-            return (pos_indicator, pred_confs, pred_locs, true_locs), (pred_texts, true_texts, pred_txtlens, true_txtlens)
+            return (pos_indicator, pred_confs, pred_rboxes, true_rboxes), (pred_texts, true_texts, pred_txtlens, true_txtlens)
 
         else:
             pass

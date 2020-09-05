@@ -199,7 +199,7 @@ def quads2rboxes_numpy(quads, w, h, shrink_scale=0.3):
     box_nums, _, _ = reshaped_quads.shape
 
     # initialization
-    rbox = np.zeros((h, w, 5))  # shape=(h, w, 5=(4=(t, r, b, l)+1=(angle))
+    rbox = np.zeros((h, w, 5), dtype=np.float32)  # shape=(h, w, 5=(4=(t, r, b, l)+1=(angle))
     pos = np.zeros((h, w), dtype=np.bool)
 
     # shrink
@@ -275,7 +275,7 @@ def rboxes2quads_numpy(rboxes):
     dists, angles = rboxes[..., :4], rboxes[..., 4]
 
     # shape = (*, h, w, 5=(t,r,b,l,offset), 2=(x,y))
-    pts = np.zeros(list(dists.shape[:-1]) + [5, 2])
+    pts = np.zeros(list(dists.shape[:-1]) + [5, 2], dtype=np.float32)
 
     # assign pts for angle >= 0
     dists_pos = dists[angles >= 0]
