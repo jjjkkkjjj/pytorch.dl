@@ -5,6 +5,7 @@ import logging
 from dl.data.base.augmentations import decision, Compose
 from dl.data.objrecog.augmentations import *
 from ...data.utils.boxes import iou_numpy, corners2centroids_numpy
+from ...data.utils.points import apply_affine
 
 """
 IMPORTANT: augmentation will be ran before transform and target_transform
@@ -12,8 +13,8 @@ IMPORTANT: augmentation will be ran before transform and target_transform
 ref > http://www.telesens.co/2018/06/28/data-augmentation-in-ssd/
 """
 class RandomExpand(object):
-    def __init__(self, filled_rgb_mean=(103.939, 116.779, 123.68), rmin=1, rmax=4, p=0.5):
-        self.filled_rgb_mean = filled_rgb_mean
+    def __init__(self, filled_rgb=(103.939, 116.779, 123.68), rmin=1, rmax=4, p=0.5):
+        self.filled_rgb = filled_rgb
         self.ratio_min = rmin
         self.ratio_max = rmax
         self.p = p
@@ -35,8 +36,23 @@ class RandomExpand(object):
             topleft_x = int(random.uniform(0, new_w - w))
             topleft_y = int(random.uniform(0, new_h - h))
 
+            affine = cv2.getAffineTransform(src=np.array([[0,0], [0,h], [w,0]], dtype=np.float32),
+                                            dst=np.array([[topleft_x, topleft_y], [topleft_x, topleft_y+h], [topleft_x+w, topleft_y]], dtype=np.float32))
+            img = cv2.warpAffine(img, affine, (new_w, new_h), borderValue=self.filled_rgb)
+
+            if len(args) > 0:
+                quads = args[0]
+                bboxes, quads = apply_affine(affine, (w, h), (new_w, new_h), bboxes.reshape(-1, 2, 2), quads.reshape(-1, 4, 2))
+
+                bboxes = bboxes.reshape((-1, 8))
+                quads = quads.reshape((-1, 8))
+                return img, (labels, bboxes, flags, quads, *args[1:])
+            else:
+                bboxes = apply_affine(affine, (w, h), (new_w, new_h), bboxes.reshape(-1, 2, 2)).reshape((-1, 4))
+
+            """
             # filled with normalized mean value
-            new_img = np.ones((new_h, new_w, c)) * np.broadcast_to(self.filled_rgb_mean, shape=(1, 1, c))
+            new_img = np.ones((new_h, new_w, c)) * np.broadcast_to(self.filled_rgb, shape=(1, 1, c))
 
             # put original image to selected topleft coordinates
             new_img[topleft_y:topleft_y+h, topleft_x:topleft_x+w] = img
@@ -53,9 +69,82 @@ class RandomExpand(object):
             # to percent
             bboxes[:, 0::2] /= float(new_w)
             bboxes[:, 1::2] /= float(new_h)
+            """
 
         return img, (labels, bboxes, flags, *args)
 
+class RandomFlip(object):
+    def __init__(self, p=0.5):
+        self.p = p
+
+    def __call__(self, img, labels, bboxes, flags, *args):
+        if decision(self.p):
+            h, w, _ = img.shape
+            """
+            copy because ->>>>
+            ValueError: some of the strides of a given numpy array are negative.
+             This is currently not supported, but will be added in future releases.
+            """
+
+            """
+            img = img[:, ::-1].copy()
+
+            ret_bboxes = bboxes.copy()
+            ret_bboxes[:, 0::2] = 1 - ret_bboxes[:, 2::-2]
+            bboxes = ret_bboxes.clip(min=0, max=1)
+            """
+            src = np.array([[0.0, 0.0],[0.0, 1.0],[1.0, 0.0]], np.float32)
+            dst = src.copy()
+            dst[:, 0] = w - src[:, 0]
+            affine = cv2.getAffineTransform(src=src, dst=dst)
+
+            img = cv2.warpAffine(img, affine, (w, h))
+
+            if len(args) > 0:
+                quads = args[0]
+                bboxes, quads = apply_affine(affine, (w, h), (w, h), bboxes.reshape(-1, 2, 2), quads.reshape(-1, 4, 2))
+
+                bboxes = bboxes.reshape((-1, 8))
+                quads = quads.reshape((-1, 8))
+                return img, (labels, bboxes, flags, quads, *args[1:])
+            else:
+                bboxes = apply_affine(affine, (w, h), (w, h), bboxes.reshape((-1, 2, 2))).reshape(-1, 4)
+
+        return img, (labels, bboxes, flags, *args)
+
+class RandomScaleH(object):
+    def __init__(self, smin=0.8, smax=1.2, keep_aspect=True, p=0.5):
+        self.smin = smin
+        self.smax = smax
+        self.keep_aspect = keep_aspect
+        self.p = p
+
+    def __call__(self, img, labels, bboxes, flags, *args):
+        if decision(self.p):
+            h, w, _ = img.shape
+            scaleh = random.uniform(self.smin, self.smax)
+            scalev = scaleh if self.keep_aspect else 1
+            #print(img.shape)
+            img = cv2.resize(img, dsize=None, fx=scaleh, fy=scalev)
+            #print(img.shape)
+        return img, (labels, bboxes, flags, *args)
+
+class RandomScaleV(object):
+    def __init__(self, smin=0.8, smax=1.2, keep_aspect=True, p=0.5):
+        self.smin = smin
+        self.smax = smax
+        self.keep_aspect = keep_aspect
+        self.p = p
+
+    def __call__(self, img, labels, bboxes, flags, *args):
+        if decision(self.p):
+            h, w, _ = img.shape
+            scalev = random.uniform(self.smin, self.smax)
+            scaleh = scalev if self.keep_aspect else 1
+            #print(img.shape)
+            img = cv2.resize(img, dsize=None, fx=scaleh, fy=scalev)
+            #print(img.shape)
+        return img, (labels, bboxes, flags, *args)
 
 class _SampledPatchOp(object):
     class UnSatisfy(Exception):
@@ -157,7 +246,7 @@ class RandomSampled(object):
             RandomIoUSampledPatch(0.7, None),
             RandomIoUSampledPatch(0.9, None),
             RandomSampledPatch()
-            ), max_iteration=20):
+            ), max_iteration=50):
 
         # check argument is proper
         for op in options:
@@ -191,26 +280,6 @@ class RandomSampled(object):
                     print(time.time()-s)
                     return ret
                 """
-
-class RandomFlip(object):
-    def __init__(self, p=0.5):
-        self.p = p
-
-    def __call__(self, img, labels, bboxes, flags, *args):
-        if decision(self.p):
-            _, w_, _ = img.shape
-            """
-            copy because ->>>>
-            ValueError: some of the strides of a given numpy array are negative.
-             This is currently not supported, but will be added in future releases.
-            """
-            img = img[:, ::-1].copy()
-
-            ret_bboxes = bboxes.copy()
-            ret_bboxes[:, 0::2] = 1 - ret_bboxes[:, 2::-2]
-            bboxes = ret_bboxes.clip(min=0, max=1)
-
-        return img, (labels, bboxes, flags, *args)
 
 
 class GeometricDistortions(Compose):
