@@ -1,11 +1,77 @@
 from numpy import random
 import numpy as np
-import logging
+import logging, cv2
 
 from .._utils import _check_ins
 from ...data.utils.boxes import iou_numpy, coverage_numpy, corners2centroids_numpy
 from ..objrecog.augmentations import *
 
+class RandomRotate(object):
+    def __init__(self, fill_rgb=(103.939, 116.779, 123.68), center=(0, 0), amin=-10, amax=10, fit=True, p=0.5):
+        self.fill_rgb = fill_rgb
+        self.center = center
+        self.amin = amin
+        self.amax = amax
+        self.fit = fit
+        self.p = p
+
+    def __call__(self, img, labels, bboxes, flags, quads, texts):
+        """
+        :param img: ndarray
+        :param bboxes: ndarray, shape = (box num, 4=(xmin, ymin, xmax, ymax))
+        :param labels: ndarray, shape = (box num, class num)
+        :param flags: list of dict, whose length is box num
+        :param quads: ndarray, shape = (box num, 8=(top-left(x,y),... clockwise))
+        :param texts: list of str, whose length is box num
+        :return:
+        """
+        if decision(self.p):
+            h, w, _ = img.shape
+
+            quads[:, ::2] *= w
+            quads[:, 1::2] *= h
+
+            box_nums = bboxes.shape[0]
+            # shape = (box nums, 3=(x,y,1), 4)
+            mat_quads = np.concatenate((np.swapaxes(quads.reshape((-1, 4, 2)), -2, -1),
+                                        np.ones((box_nums, 1, 4))), axis=1)
+
+            angle = random.uniform(self.amin, self.amax)
+            if self.fit:
+                radian = np.radians(angle)
+                sine = np.abs(np.sin(radian))
+                cosine = np.abs(np.cos(radian))
+                tri_mat = np.array([[cosine, sine], [sine, cosine]], np.float32)
+                old_size = np.array([w, h], np.float32)
+                new_size = np.ravel(tri_mat @ old_size.reshape(-1, 1))
+
+
+                affine = cv2.getRotationMatrix2D((w / 2.0, h / 2.0), angle, 1.0)
+                # move
+                affine[:2, 2] += (new_size - old_size) / 2.0
+                # resize
+                affine[:2, :] *= (old_size / new_size).reshape(-1, 1)
+            else:
+                affine = cv2.getRotationMatrix2D(self.center, angle, 1.0)
+
+            img = cv2.warpAffine(img, affine, (w, h), borderValue=self.fill_rgb)
+            R = np.concatenate((affine, np.array([[0, 0, 1]])), axis=0)
+
+            mat_quads = R @ mat_quads
+            # shape = (box nums, 4, 2=(x,y))
+            mat_quads = np.swapaxes(mat_quads[..., :2, :], -2, -1)
+
+            quads = mat_quads.reshape(box_nums, 8).astype(np.float32)
+
+            quads[:, ::2] /= w
+            quads[:, 1::2] /= h
+
+            # xmin and ymin
+            bboxes[:, 0:2] = np.min(mat_quads, axis=1)
+            # xmax and ymax
+            bboxes[:, 2:4] = np.max(mat_quads, axis=1)
+
+        return img, (labels, bboxes, flags, quads, texts)
 
 class _SampledPatchOp(object):
     class UnSatisfy(Exception):
@@ -32,15 +98,14 @@ class RandomThresSampledPatch(_SampledPatchOp):
         self.aspect_ration_min = _check_ins('ar_min', ar_min, (float, int))
         self.aspect_ration_max = _check_ins('ar_max', ar_max, (float, int))
 
-    def __call__(self, img, labels, bboxes, flags, *args):
+    def __call__(self, img, labels, bboxes, flags, quads, texts):
         """
         :param img: ndarray
         :param bboxes: ndarray, shape = (box num, 4=(xmin, ymin, xmax, ymax))
         :param labels: ndarray, shape = (box num, class num)
         :param flags: list of dict, whose length is box num
-        :param args:
-                quads: ndarray, shape = (box num, 8=(top-left(x,y),... clockwise))
-                texts: list of str, whose length is box num
+        :param quads: ndarray, shape = (box num, 8=(top-left(x,y),... clockwise))
+        :param texts: list of str, whose length is box num
         :return:
         """
         # IMPORTANT: img = rgb order, bboxes: minmax coordinates with PERCENT
@@ -48,8 +113,8 @@ class RandomThresSampledPatch(_SampledPatchOp):
 
         ret_img = img.copy()
         ret_bboxes = bboxes.copy()
-        ret_quads = args[0].copy()
-        ret_texts = np.array(args[1]) # convert list to ndarray to mask
+        ret_quads = quads.copy()
+        ret_texts = np.array(texts) # convert list to ndarray to mask
 
         # get patch width and height, and aspect ratio randomly
         patch_w = random.randint(int(0.3 * w), w)
