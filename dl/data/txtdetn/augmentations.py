@@ -4,7 +4,8 @@ import logging
 
 from .._utils import _check_ins
 from ...data.utils.boxes import iou_numpy, coverage_numpy, corners2centroids_numpy
-from ..objdetn.augmentations import Compose
+from ..objrecog.augmentations import *
+
 
 class _SampledPatchOp(object):
     class UnSatisfy(Exception):

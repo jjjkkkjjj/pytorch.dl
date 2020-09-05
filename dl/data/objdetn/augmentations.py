@@ -2,10 +2,15 @@ from numpy import random
 import numpy as np
 import logging
 
-from ._utils import decision
-from ....data.utils.boxes import iou_numpy, corners2centroids_numpy
-from .base import Compose
+from dl.data.base.augmentations import decision, Compose
+from dl.data.objrecog.augmentations import *
+from ...data.utils.boxes import iou_numpy, corners2centroids_numpy
 
+"""
+IMPORTANT: augmentation will be ran before transform and target_transform
+
+ref > http://www.telesens.co/2018/06/28/data-augmentation-in-ssd/
+"""
 class RandomExpand(object):
     def __init__(self, filled_rgb_mean=(103.939, 116.779, 123.68), rmin=1, rmax=4, p=0.5):
         self.filled_rgb_mean = filled_rgb_mean
@@ -216,3 +221,11 @@ class GeometricDistortions(Compose):
             RandomFlip()
         ]
         super().__init__(gmdists)
+
+class AugmentationOriginal(Compose):
+    def __init__(self):
+        augmentations = [
+            PhotometricDistortions(),
+            GeometricDistortions()
+        ]
+        super().__init__(augmentations)
