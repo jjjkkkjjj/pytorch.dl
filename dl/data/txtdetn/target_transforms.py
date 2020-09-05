@@ -14,7 +14,7 @@ from ..objdetn.target_transforms import (
 )
 from ..objdetn.target_transforms import _IgnoreBase
 from ..txtrecog.target_transforms import Text2Number as _Text2Number
-from ..utils.quads import quads2rboxes_numpy, shrink_quads_numpy
+from ..utils.quads import quads2rboxes_numpy, shrink_quads_numpy, angles_from_quads_numpy
 
 class Text2Number(object):
     def __init__(self, class_labels, blankIndex=None, ignore_nolabel=True, toLower=True):
@@ -172,6 +172,12 @@ class ShrinkQuadrilateral(object):
     def __call__(self, labels, bboxes, flags, quads, texts):
         assert quads.shape[1] == 8, '4th arguments must be quadrilateral points'
         return (labels, bboxes, flags, shrink_quads_numpy(quads, self._scale), texts)
+
+class AddQuadsToAngles(object):
+    def __call__(self, labels, bboxes, flags, quads, texts):
+        angles = angles_from_quads_numpy(quads)
+        # returned shape = (box nums, 9=(8=(x1,y1,... clockwise from top-left) + 1=angle))
+        return (labels, bboxes, flags, np.concatenate((quads, angles), axis=-1), texts)
 
 class ToRBox(object):
     def __init__(self, w, h, shrink_scale=0.3):

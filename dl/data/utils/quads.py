@@ -65,6 +65,25 @@ def quad2mask_numpy(quad, w, h):
     # img.show()
     return np.array(img, dtype=np.bool)
 
+def angles_from_quads_numpy(quads):
+    """
+    :param quads: ndarray, shape = (box nums, 8=(x1,y1,... clockwose from top-left))
+    :return angles: ndarray, shape = (box nums, 1)
+            Note that angle range is [-pi/4, pi/4)
+    """
+    box_nums = quads.shape[0]
+
+    angles = np.zeros((box_nums, 1))
+    reshaped_quads = quads.reshape((-1, 4, 2))
+    for b in range(box_nums):
+        rect = cv2.minAreaRect(reshaped_quads[b])
+        # note that angle range is (0, 90]
+        angle = -rect[-1]
+        if angle == 90:
+            angle = 0
+        angles[b, 0] = angle if angle < 45 else -(90 - angle)
+    return np.deg2rad(angles)
+
 def shrink_quads_numpy(quads, scale=0.3):
     """
     convert quads into rbox, see fig4 in EAST paper
