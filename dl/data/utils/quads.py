@@ -41,7 +41,7 @@ def quads_iou(a, b):
 
 def quad2mask(quad, w, h, device):
     """
-    :param quad: Tensor, shape = (8=(x1,y1,...))
+    :param quad: Tensor, shape = (8=(x1,y1,...)), percent style
     :param w: int
     :param h: int
     :param device: device
@@ -51,7 +51,7 @@ def quad2mask(quad, w, h, device):
 
 def quad2mask_numpy(quad, w, h):
     """
-    :param quad: ndarray, shape = (8=(x1,y1,...))
+    :param quad: ndarray, shape = (8=(x1,y1,...)), percent style
     :param w: int
     :param h: int
     :return: mask_per_rect: Bool ndarray, shape = (h, w)
@@ -64,6 +64,31 @@ def quad2mask_numpy(quad, w, h):
     ImageDraw.Draw(img).polygon(_quad, outline=255, fill=255)
     # img.show()
     return np.array(img, dtype=np.bool)
+
+def quads2allmask(quads, w, h, device):
+    """
+    :param quads: Tensor, shape = (box num, 8=(x1,y1,...)), percent style
+    :param w: int
+    :param h: int
+    :param device: device
+    :return: mask_per_rect: Bool Tensor, shape = (h, w)
+    """
+    return torch.from_numpy(quads2allmask_numpy(quads.numpy(), w, h)).to(device=device)
+
+def quads2allmask_numpy(quads, w, h):
+    """
+    :param quads: ndarray, shape = (box num, 8=(x1,y1,...)), percent style
+    :param w: int
+    :param h: int
+    :return: mask_per_rect: Bool ndarray, shape = (h, w)
+    """
+    box_nums = quads.shape[0]
+
+    ret = np.zeros((h, w), dtype=np.bool)
+    for b in range(box_nums):
+        ret = np.logical_or(ret, quad2mask_numpy(quads[b], w, h))
+
+    return ret
 
 def angles_from_quads_numpy(quads):
     """

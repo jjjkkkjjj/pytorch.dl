@@ -3,12 +3,14 @@ from dl.data import transforms
 from dl.models.fots import FOTSRes50, FOTSRes34
 from dl.loss.fots import FOTSLoss
 
-from dl.optim.scheduler import IterStepLR
+from dl.optim.scheduler import IterMultiStepLR
 from dl.log import *
 
 #from torchvision import transforms > not import!!
 from torch.utils.data import DataLoader
 from torch.optim.adam import Adam
+
+import numpy as np
 
 if __name__ == '__main__':
     """
@@ -50,7 +52,7 @@ if __name__ == '__main__':
     model(img.cuda(), targets, texts)
     """
     optimizer = Adam(model.parameters(), lr=1e-3, weight_decay=5e-4)
-    iter_sheduler = IterStepLR(optimizer, step_size=10000, gamma=0.94, verbose=True)
+    iter_sheduler = IterMultiStepLR(optimizer, milestones=np.arange(10000, 107344*10, 10000), gamma=0.94, verbose=True)
 
     save_manager = SaveManager(modelname='fots', interval=1, max_checkpoints=3, plot_interval=10)
 

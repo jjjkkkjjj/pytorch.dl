@@ -171,6 +171,7 @@ class RandomIoUSampledPatch(_SampledPatchOp):
 
         ret_img = img.copy()
         ret_bboxes = bboxes.copy()
+        ret_flags = np.array(flags)  # convert list to ndarray to mask
 
         # get patch width and height, and aspect ratio randomly
         patch_w = random.randint(int(0.3 * w), w)
@@ -217,6 +218,7 @@ class RandomIoUSampledPatch(_SampledPatchOp):
         # filtered out the boxes with unsatisfied above condition
         ret_bboxes = ret_bboxes[mask_box, :].copy()
         ret_labels = labels[mask_box]
+        ret_flags = ret_flags[mask_box]
 
         # adjust boxes within patch
         ret_bboxes[:, :2] = np.maximum(ret_bboxes[:, :2], patch[:, :2])
@@ -230,7 +232,7 @@ class RandomIoUSampledPatch(_SampledPatchOp):
         ret_bboxes[:, 0::2] /= float(patch_w)
         ret_bboxes[:, 1::2] /= float(patch_h)
 
-        return ret_img, (ret_labels, ret_bboxes, flags, *args)
+        return ret_img, (ret_labels, ret_bboxes, ret_flags.tolist(), *args)
 
 class RandomSampledPatch(RandomIoUSampledPatch):
     def __init__(self):
