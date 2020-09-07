@@ -2,15 +2,15 @@ from torchvision.models.utils import load_state_dict_from_url
 import logging, os
 
 from ..._utils import (
-    _check_ins, _check_norm, _initialize_xavier_uniform,
+    _check_ins, _initialize_xavier_uniform,
     _check_image, _get_normed_and_origin_img, _get_model_url
 )
-from .core.boxes.codec import *
-from .core.boxes.dbox import *
+from dl.models.ssd.core.codec import *
+from dl.models.ssd.core.dbox import *
 from .core.predict import *
 from ..layers import *
 from .core.inference import *
-from ..base import ObjectDetectionModelBase
+from ..base.model import ObjectDetectionModelBase
 from ...data.utils.converter import toVisualizeRectLabelRGBimg
 
 class SSDTrainConfig(object):

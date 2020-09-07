@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torchvision.models.utils import load_state_dict_from_url
 from ..layers import Flatten
-from ..base import ModelBase
+from ..base.model import ModelBase
 from ..._utils import _get_model_url
 from collections import OrderedDict
 

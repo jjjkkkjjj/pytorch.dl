@@ -4,7 +4,8 @@ import logging
 
 from dl.data.base.augmentations import decision, Compose
 from dl.data.objrecog.augmentations import *
-from ...data.utils.boxes import iou_numpy, corners2centroids_numpy
+from ...data.utils.boxes import iou_numpy, corners2centroids_numpy, sort_corners_numpy
+from ...data.utils.quads import sort_clockwise_topleft_numpy
 from ...data.utils.points import apply_affine
 
 """
@@ -40,7 +41,7 @@ class RandomExpand(object):
                                             dst=np.array([[topleft_x, topleft_y], [topleft_x, topleft_y+h], [topleft_x+w, topleft_y]], dtype=np.float32))
             img = cv2.warpAffine(img, affine, (new_w, new_h), borderValue=self.filled_rgb)
 
-            if len(args) > 0:
+            if len(args) > 0 and isinstance(args[0], np.ndarray):
                 quads = args[0]
                 bboxes, quads = apply_affine(affine, (w, h), (new_w, new_h), bboxes.reshape(-1, 2, 2), quads.reshape(-1, 4, 2))
 
@@ -100,15 +101,24 @@ class RandomFlip(object):
 
             img = cv2.warpAffine(img, affine, (w, h))
 
-            if len(args) > 0:
+            if len(args) > 0 and isinstance(args[0], np.ndarray):
                 quads = args[0]
                 bboxes, quads = apply_affine(affine, (w, h), (w, h), bboxes.reshape(-1, 2, 2), quads.reshape(-1, 4, 2))
 
-                bboxes = bboxes.reshape((-1, 8))
+                bboxes = bboxes.reshape((-1, 4))
+                # re-sort to (xmin,ymin,xmax,ymax)
+                bboxes = sort_corners_numpy(bboxes)
+
                 quads = quads.reshape((-1, 8))
+                # re-sort to (x1,y1,x2,y2,... clockwise from topleft)
+                quads = sort_clockwise_topleft_numpy(quads)
+
                 return img, (labels, bboxes, flags, quads, *args[1:])
             else:
                 bboxes = apply_affine(affine, (w, h), (w, h), bboxes.reshape((-1, 2, 2))).reshape(-1, 4)
+                # re-sort to (xmin,ymin,xmax,ymax)
+                bboxes = sort_corners_numpy(bboxes)
+
 
         return img, (labels, bboxes, flags, *args)
 

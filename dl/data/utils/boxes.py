@@ -202,59 +202,74 @@ def dice_numpy(a, b):
 
     return 2*intersectionArea / (A + B)
 
+def sort_corners(a):
+    """
+    Sort corners points (xmin, ymin, xmax, ymax)
+    :param a: Box Tensor, shape is ([nums, ]*, 4=(x1,y1,x2,y2))
+    :return a: Box Tensor, shape is ([nums, ]*, 4=(xmin, ymin, xmax, ymax))
+    """
+    return torch.cat((a[:, ::2].min(dim=-1, keepdims=True),
+                      a[:, 1::2].min(dim=-1, keepdims=True),
+                      a[:, ::2].max(dim=-1, keepdims=True),
+                      a[:, 1::2].max(dim=-1, keepdims=True)), dim=-1)
+
+def sort_corners_numpy(a):
+    """
+    Sort corners points (xmin, ymin, xmax, ymax)
+    :param a: Box ndarray, shape is ([nums, ]*, 4=(x1,y1,x2,y2))
+    :return a: Box ndarray, shape is ([nums, ]*, 4=(xmin, ymin, xmax, ymax))
+    """
+    return np.concatenate((a[:, ::2].min(axis=-1, keepdims=True),
+                           a[:, 1::2].min(axis=-1, keepdims=True),
+                           a[:, ::2].max(axis=-1, keepdims=True),
+                           a[:, 1::2].max(axis=-1, keepdims=True)), axis=-1)
+
 def corners2centroids(a):
     """
     :param a: Box Tensor, shape is ([nums, ]*, 4=(xmin, ymin, xmax, ymax))
-    :return:
-        a: Box Tensor, shape is ([nums, ]*, 4=(cx, cy, w, h))
+    :return a: Box Tensor, shape is ([nums, ]*, 4=(cx, cy, w, h))
     """
     return torch.cat(((a[..., 2:] + a[..., :2])/2, a[..., 2:] - a[..., :2]), dim=-1)
 
 def corners2centroids_numpy(a):
     """
-    :param a: Box Tensor, shape is ([nums, ]*, 4=(xmin, ymin, xmax, ymax))
-    :return:
-        a: Box Tensor, shape is ([nums, ]*, 4=(cx, cy, w, h))
+    :param a: Box ndarray, shape is ([nums, ]*, 4=(xmin, ymin, xmax, ymax))
+    :return a: Box ndarray, shape is ([nums, ]*, 4=(cx, cy, w, h))
     """
     return np.concatenate(((a[..., 2:] + a[..., :2])/2, a[..., 2:] - a[..., :2]), axis=-1)
 
 def corners2minmax(a):
     """
     :param a: Box Tensor, shape is ([nums, ]*, 4=(xmin, ymin, xmax, ymax))
-    :return:
-        a: Box Tensor, shape is ([nums, ]*, 4=(xmin, xmax, ymin, ymax))
+    :return a: Box Tensor, shape is ([nums, ]*, 4=(xmin, xmax, ymin, ymax))
     """
     return torch.index_select(a, dim=-1, index=torch.tensor([0, 2, 1, 3]))
 
 def corners2minmax_numpy(a):
     """
-    :param a: Box Tensor, shape is ([nums, ]*, 4=(xmin, ymin, xmax, ymax))
-    :return:
-        a: Box Tensor, shape is ([nums, ]*, 4=(xmin, xmax, ymin, ymax))
+    :param a: Box ndarray, shape is ([nums, ]*, 4=(xmin, ymin, xmax, ymax))
+    :return a: Box ndarray, shape is ([nums, ]*, 4=(xmin, xmax, ymin, ymax))
     """
     return a[..., np.array((0, 2, 1, 3))]
 
 def centroids2corners(a):
     """
     :param a: Box Tensor, shape is ([nums, ]*, 4=(cx, cy, w, h))
-    :return:
-        a: Box Tensor, shape is ([nums, ]*, 4=(xmin, ymin, xmax, ymax))
+    :return a: Box Tensor, shape is ([nums, ]*, 4=(xmin, ymin, xmax, ymax))
     """
     return torch.cat((a[..., :2] - a[..., 2:]/2, a[..., :2] + a[..., 2:]/2), dim=-1)
 
 def centroids2corners_numpy(a):
     """
-    :param a: Box Tensor, shape is ([nums, ]*, 4=(cx, cy, w, h))
-    :return:
-        a: Box Tensor, shape is ([nums, ]*, 4=(xmin, ymin, xmax, ymax))
+    :param a: Box ndarray, shape is ([nums, ]*, 4=(cx, cy, w, h))
+    :return a: Box ndarray, shape is ([nums, ]*, 4=(xmin, ymin, xmax, ymax))
     """
     return np.concatenate((a[..., :2] - a[..., 2:]/2, a[..., :2] + a[..., 2:]/2), axis=-1)
 
 def centroids2minmax(a):
     """
     :param a: Box Tensor, shape is ([nums, ]*, 4=(cx, cy, w, h))
-    :return:
-        a: Box Tensor, shape is ([nums, ]*, 4=(xmin, xmax, ymin, ymax))
+    :return a: Box Tensor, shape is ([nums, ]*, 4=(xmin, xmax, ymin, ymax))
     """
     return torch.cat((a[..., 0] - a[..., 2]/2,
                       a[..., 0] + a[..., 2]/2,
@@ -264,8 +279,7 @@ def centroids2minmax(a):
 def centroids2minmax_numpy(a):
     """
     :param a: Box Tensor, shape is ([nums, ]*, 4=(cx, cy, w, h))
-    :return:
-        a: Box Tensor, shape is ([nums, ]*, 4=(xmin, xmax, ymin, ymax))
+    :return a: Box Tensor, shape is ([nums, ]*, 4=(xmin, xmax, ymin, ymax))
     """
     return np.concatenate((a[..., 0] - a[..., 2]/2,
                            a[..., 0] + a[..., 2]/2,
@@ -275,8 +289,7 @@ def centroids2minmax_numpy(a):
 def minmax2centroids(a):
     """
     :param a: Box Tensor, shape is ([nums, ]*, 4=(xmin, xmax, ymin, ymax))
-    :return:
-        a: Box Tensor, shape is ([nums, ]*, 4=(cx, cy, w, h))
+    :return a: Box Tensor, shape is ([nums, ]*, 4=(cx, cy, w, h))
     """
     return torch.cat((a[..., 0] + (a[..., 1] - a[..., 0])/2,
                       a[..., 2] + (a[..., 3] - a[..., 2])/2,
@@ -285,9 +298,8 @@ def minmax2centroids(a):
 
 def minmax2centroids_numpy(a):
     """
-    :param a: Box Tensor, shape is ([nums, ]*, 4=(xmin, xmax, ymin, ymax))
-    :return:
-        a: Box Tensor, shape is ([nums, ]*, 4=(cx, cy, w, h))
+    :param a: Box ndarray, shape is ([nums, ]*, 4=(xmin, xmax, ymin, ymax))
+    :return a: Box ndarray, shape is ([nums, ]*, 4=(cx, cy, w, h))
     """
     return np.concatenate((a[..., 0] + (a[..., 1] - a[..., 0])/2,
                            a[..., 2] + (a[..., 3] - a[..., 2])/2,
@@ -297,24 +309,21 @@ def minmax2centroids_numpy(a):
 def minmax2corners(a):
     """
     :param a: Box Tensor, shape is ([nums, ]*, 4=(xmin, xmax, ymin, ymax))
-    :return:
-        a: Box Tensor, shape is ([nums, ]*, 4=(xmin, ymin, xmax, ymax))
+    :return a: Box Tensor, shape is ([nums, ]*, 4=(xmin, ymin, xmax, ymax))
     """
     return torch.index_select(a, dim=-1, index=torch.tensor([0, 2, 1, 3]))
 
 def minmax2corners_numpy(a):
     """
-    :param a: Box Tensor, shape is ([nums, ]*, 4=(xmin, xmax, ymin, ymax))
-    :return:
-        a: Box Tensor, shape is ([nums, ]*, 4=(xmin, ymin, xmax, ymax))
+    :param a: Box ndarray, shape is ([nums, ]*, 4=(xmin, xmax, ymin, ymax))
+    :return a: Box ndarray, shape is ([nums, ]*, 4=(xmin, ymin, xmax, ymax))
     """
     return a[..., np.array((0, 2, 1, 3))]
 
 def dists2corners(a):
     """
     :param a: dist Tensor, shape = (*, h, w, 4=(t, r, b, l))
-    :return:
-        a: Box Tensor, shape is (*, h, w, 4=(xmin, ymin, xmax, ymax))
+    :return a: Box Tensor, shape is (*, h, w, 4=(xmin, ymin, xmax, ymax))
     """
     assert a.ndim >= 3, 'must be greater than 3d'
     h, w, _ = a.shape[-3:]
@@ -342,8 +351,7 @@ def dists2corners(a):
 def dists2corners_numpy(a):
     """
     :param a: dist ndarray, shape = (*, h, w, 4=(t, r, b, l))
-    :return:
-        a: Box ndarray, shape is (*, h, w, 4=(xmin, ymin, xmax, ymax))
+    :return a: Box ndarray, shape is (*, h, w, 4=(xmin, ymin, xmax, ymax))
     """
     assert a.ndim >= 3, 'must be greater than 3d'
     h, w, _ = a.shape[-3:]
@@ -368,32 +376,28 @@ def dists2corners_numpy(a):
 def dists2centroids(a):
     """
     :param a: dist Tensor, shape = (*, h, w, 4=(t, r, b, l))
-    :return:
-        a: Box Tensor, shape is (*, h, w, 4=(cx, cy, w, h))
+    :return a: Box Tensor, shape is (*, h, w, 4=(cx, cy, w, h))
     """
     return corners2centroids(dists2corners(a))
 
 def dists2centroids_numpy(a):
     """
     :param a: dist ndarray, shape = (*, h, w, 4=(t, r, b, l))
-    :return:
-        a: Box ndarray, shape is (*, h, w, 4=(cx, cy, w, h))
+    :return a: Box ndarray, shape is (*, h, w, 4=(cx, cy, w, h))
     """
     return corners2centroids_numpy(dists2corners_numpy(a))
 
 def dists2minmax(a):
     """
     :param a: dist Tensor, shape = (*, h, w, 4=(t, r, b, l))
-    :return:
-        a: Box Tensor, shape is (*, h, w, 4=(xmin, xmax, ymin, ymax))
+    :return a: Box Tensor, shape is (*, h, w, 4=(xmin, xmax, ymin, ymax))
     """
     return corners2minmax(dists2corners(a))
 
 def dists2minmax_numpy(a):
     """
     :param a: dist ndarray, shape = (*, h, w, 4=(t, r, b, l))
-    :return:
-        a: Box ndarray, shape is (*, h, w, 4=(xmin, xmax, ymin, ymax))
+    :return a: Box ndarray, shape is (*, h, w, 4=(xmin, xmax, ymin, ymax))
     """
     return corners2minmax_numpy(dists2corners_numpy(a))
 

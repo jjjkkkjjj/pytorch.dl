@@ -1,5 +1,5 @@
 from ..layers import *
-from ..base import ObjectRecognitionModelBase
+from ..base.model import ObjectRecognitionModelBase
 from .codec import CTCCodec
 from ..._utils import _check_retval, _check_image, _get_normed_and_origin_img
 

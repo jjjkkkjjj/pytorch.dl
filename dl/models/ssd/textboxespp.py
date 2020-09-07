@@ -1,8 +1,8 @@
 from .base import SSDvggBase, SSDTrainConfig, SSDValConfig, load_vgg_weights
 from ..._utils import _check_ins
 from ..layers import *
-from .core.boxes.dbox import DBoxTextBoxOriginal
-from .core.boxes.codec import TextBoxCodec
+from dl.models.ssd.core.dbox import DBoxTextBoxOriginal
+from dl.models.ssd.core.codec import TextBoxCodec
 from .core.predict import TextBoxPredictor
 from .core.inference import InferenceBox, textbox_non_maximum_suppression
 from ...data.utils.converter import toVisualizeQuadsLabelRGBimg

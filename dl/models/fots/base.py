@@ -1,7 +1,7 @@
 import logging, abc
 from torch import nn
 
-from ..base import TextSpottingModelBase
+from ..base.model import TextSpottingModelBase
 from .roi import RoIRotate
 from .recog import CRNNBase
 from .utils import matching_strategy

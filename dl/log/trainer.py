@@ -4,7 +4,7 @@ from torch import nn
 import time, logging, abc, sys, os
 
 from .._utils import _check_ins
-from ..models.base import ModelBase
+from ..models.base.model import ModelBase
 from .graph import LiveGraph
 from torch.optim.lr_scheduler import _LRScheduler
 from torch.optim.optimizer import Optimizer
@@ -234,7 +234,7 @@ class TrainJupyterLoggerBase(TrainLoggerBase):
         else:
             print(saved_info)
 
-from ..models.base import ObjectRecognitionModelBase
+from ..models.base.model import ObjectRecognitionModelBase
 def _learn_objrecog(self, images, targets):
     images = images.to(self.device)
     targets = [target.to(self.device) for target in targets]
@@ -269,7 +269,7 @@ class TrainObjectRecognitionJupyterLogger(TrainJupyterLoggerBase):
         return _learn_objrecog(self, images, targets)
 
 
-from ..models.base import ObjectDetectionModelBase
+from ..models.base.model import ObjectDetectionModelBase
 def _learn_objdetn(self, images, targets):
     images = images.to(self.device)
     targets = [target.to(self.device) for target in targets]
@@ -303,7 +303,7 @@ class TrainObjectDetectionJupyterLogger(TrainJupyterLoggerBase):
         return _learn_objdetn(self, images, targets)
 
 
-from ..models.base import TextSpottingModelBase
+from ..models.base.model import TextSpottingModelBase
 def _learn_txtspotting(self, images, targets, texts):
     """
     :param self:

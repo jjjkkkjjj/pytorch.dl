@@ -39,6 +39,30 @@ def quads_iou(a, b):
 
     return torch.from_numpy(ret)
 
+def sort_clockwise_topleft(a):
+    """
+    Sort corners points (xmin, ymin, xmax, ymax)
+    :param a: Quads Tensor, shape is ([nums, ]*, 4=(x1,y1,x2,y2))
+    :return a: Quads Tensor, shape is ([nums, ]*, 4=(xmin, ymin, xmax, ymax))
+    """
+    return torch.from_numpy(sort_clockwise_topleft_numpy(a.numpy()))
+
+def sort_clockwise_topleft_numpy(a):
+    """
+    Sort corners points (x1, y1, x2, y2, ... clockwise from topleft)
+    :ref https://stackoverflow.com/questions/10846431/ordering-shuffled-points-that-can-be-joined-to-form-a-polygon-in-python
+    :param a: Quads ndarray, shape is (box nums, 8=(x1,y1,x2,y2,...))
+    :return a: Quads ndarray, shape is (box nums, 8=(x1,y1,x2,y2,... clockwise from topleft))
+    """
+    box_nums = a.shape[0]
+    centroids = np.concatenate((a[:, ::2].mean(axis=-1, keepdims=True),
+                                a[:, 1::2].mean(axis=-1, keepdims=True)), axis=-1)
+    sorted_a = np.zeros_like(a, dtype=np.float32)
+    for b in range(box_nums):
+        sorted_a[b] = np.array(sorted(a[b], key=lambda pt: np.arctan2(pt[1]-centroids[b,1], pt[0]-centroids[b,0])))
+
+    return sorted_a
+
 def quad2mask(quad, w, h, device):
     """
     :param quad: Tensor, shape = (8=(x1,y1,...)), percent style

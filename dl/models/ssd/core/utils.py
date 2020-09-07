@@ -1,6 +1,6 @@
 import torch
 
-from .....data.utils.boxes import centroids2corners, iou
+from ....data.utils.boxes import centroids2corners, iou
 
 def matching_strategy(targets, dboxes, **kwargs):
     """

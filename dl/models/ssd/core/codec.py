@@ -1,11 +1,8 @@
-from torch import nn
 import torch
 
 from .utils import matching_strategy, matching_strategy_quads
-from ....._utils import _check_norm, _check_ins
-from ....utils.codec import CodecBase
-
-import torchvision
+from ...._utils import _check_norm
+from ...base.codec import CodecBase
 
 
 class SSDCodec(CodecBase):
