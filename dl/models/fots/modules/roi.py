@@ -10,10 +10,10 @@ class RoIRotate(Module):
         self.height = height
         self._debug = _debug
 
-    def forward(self, fmaps, true_quads):
+    def forward(self, fmaps, quads):
         """
         :param fmaps: feature maps Tensor, shape = (b, c, h/4, w/4)
-        :param true_quads: list(b) of Tensor, shape = (text number, 8=(x1, y1,...)))
+        :param quads: list(b) of Tensor, shape = (text number, 8=(x1, y1,...)))
         :return:
             ret_rotated_features: list(b) of Tensor, shape = (text nums, c, height=8, non-fixed width)
             ret_true_angles: list(b) of Tensor, shape = (text nums,)
@@ -27,14 +27,14 @@ class RoIRotate(Module):
             widths = []
             matrices = []
 
-            quads = true_quads[b].cpu().numpy()
-            quads[:, ::2] *= w
-            quads[:, 1::2] *= h
+            _quads = quads[b].cpu().numpy()
+            _quads[:, ::2] *= w
+            _quads[:, 1::2] *= h
 
-            textnums = quads.shape[0]
+            textnums = _quads.shape[0]
             for t in range(textnums):
                 img = fmaps[b]
-                quad = quads[t].reshape((4, 2))
+                quad = _quads[t].reshape((4, 2))
                 tl, tr, bl, br = quad
 
                 # minAreaRect returns center_point, size, angle(deg)

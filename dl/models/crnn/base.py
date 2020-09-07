@@ -37,7 +37,15 @@ class CRNNBase(ObjectRecognitionModelBase):
         :param x: input images tensor, shape = (b, c, h, w)
         :param targets: text numbers, list of tensor, represents number as text. tensor's shape = (length of text)
         :return:
-            output: output tensor, shape = (times, b, class_nums)
+            if training:
+                predicts: output tensor, shape = (times, b, class_nums)
+                targets: LongTensor, shape = (b, max length of text)
+                pred_lengths: LongTensor, shape = (b,)
+                target_lengths: LongTensor, shape = (b,)
+            else:
+                predicts: output tensor, shape = (times, b, class_nums)
+                raw_texts: list(b) of str, raw strings
+                decoded_texts: list(b) of str, decoded strings
         """
         if self.training and targets is None:
             raise ValueError("pass \'targets\' for training mode")
