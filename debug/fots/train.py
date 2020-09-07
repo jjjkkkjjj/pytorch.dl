@@ -19,7 +19,12 @@ if __name__ == '__main__':
     )"""
 
     #augmentation = augmentations.AugmentationOriginal()
-    augmentation = None
+    augmentation = augmentations.Compose([
+        augmentations.RandomLongerResize(smin=640, smax=2560),
+        augmentations.RandomRotate(fill_rgb=(103.939, 116,779, 123.68), amin=-10, amax=10, fit=True),
+        augmentations.RandomScaleV(smin=0.8, smax=1.2, keep_aspect=True),
+        augmentations.RandomSimpleCrop()
+    ])
 
     ignore = target_transforms.Ignore(strange=True)
 
