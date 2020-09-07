@@ -1,6 +1,6 @@
 import torch
 
-from ...data.utils.quads import quads2rboxes_numpy
+from ....data.utils.quads import quads2rboxes_numpy
 
 def matching_strategy(labels, w, h, device, scale=0.3):
     """

@@ -1,5 +1,5 @@
-from ..layers import *
-from ..crnn.base import CRNNBase
+from ...layers import *
+from ...crnn.base import CRNNBase
 
 class CRNN(CRNNBase):
     def __init__(self, class_labels, input_shape, blankIndex):

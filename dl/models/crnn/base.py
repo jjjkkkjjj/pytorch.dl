@@ -1,6 +1,6 @@
 from ..layers import *
 from ..base.model import ObjectRecognitionModelBase
-from .codec import CTCCodec
+from .modules.codec import CTCCodec
 from ..._utils import _check_retval, _check_image, _get_normed_and_origin_img
 
 from torch.nn import functional as F

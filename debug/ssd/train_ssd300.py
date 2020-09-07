@@ -47,7 +47,7 @@ if __name__ == '__main__':
     """
     imgs, targets = utils.batch_ind_fn((train_dataset[2000],))
     p, d = model(imgs)
-    from dl.core.boxes import matching_strategy
+    from dl.modules.boxes import matching_strategy
     matching_strategy(targets, d, batch_num=1)
     """
     optimizer = SGD(model.parameters(), lr=1e-3, momentum=0.9, weight_decay=5e-4)

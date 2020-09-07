@@ -3,8 +3,8 @@ from torch import nn
 from torchvision import models
 from torch.nn import functional as F
 
-from ..layers import Conv2d
-from .base import FeatureExtractorBase
+from ...layers import Conv2d
+from ..base import FeatureExtractorBase
 
 class Deconv(nn.Module):
     def __init__(self, prev_channels, out_channels, shared_channels):

@@ -7,7 +7,7 @@ sys.path.append('...')
 from ..data.objdetn.datasets import _DatasetBase
 from ..models.base import ObjectDetectionModelBase
 from .._utils import _check_ins
-from dl.models.ssd.core.utils import iou_numpy, centroids2corners_numpy
+from dl.models.ssd.modules.utils import iou_numpy, centroids2corners_numpy
 
 # mAP: https://datascience.stackexchange.com/questions/25119/how-to-calculate-map-for-detection-task-for-the-pascal-voc-challenge
 # https://towardsdatascience.com/breaking-down-mean-average-precision-map-ae462f623a52

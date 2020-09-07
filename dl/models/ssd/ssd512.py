@@ -1,5 +1,5 @@
 from .base import SSDvggBase, SSDTrainConfig, SSDValConfig, load_vgg_weights
-from .core.dbox import *
+from .modules.dbox import *
 from ..layers import *
 
 from torch import nn

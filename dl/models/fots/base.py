@@ -2,9 +2,9 @@ import logging, abc
 from torch import nn
 
 from ..base.model import TextSpottingModelBase
-from .roi import RoIRotate
-from .recog import CRNNBase
-from .utils import matching_strategy
+from dl.models.fots.modules.roi import RoIRotate
+from dl.models.fots.modules.recog import CRNNBase
+from dl.models.fots.modules.utils import matching_strategy
 from ..._utils import _check_retval
 
 class FeatureExtractorBase(nn.Module):

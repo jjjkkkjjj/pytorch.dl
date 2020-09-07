@@ -1,7 +1,7 @@
 import torch, re
 from torch.nn.utils.rnn import pad_sequence
 
-from dl.models.base.codec import CodecBase
+from ...base.codec import CodecBase
 
 class CTCCodec(CodecBase):
     def __init__(self, class_labels, blankIndex):

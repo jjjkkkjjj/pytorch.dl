@@ -5,11 +5,11 @@ from ..._utils import (
     _check_ins, _initialize_xavier_uniform,
     _check_image, _get_normed_and_origin_img, _get_model_url
 )
-from dl.models.ssd.core.codec import *
-from dl.models.ssd.core.dbox import *
-from .core.predict import *
+from dl.models.ssd.modules.codec import *
+from dl.models.ssd.modules.dbox import *
+from .modules.predict import *
 from ..layers import *
-from .core.inference import *
+from .modules.inference import *
 from ..base.model import ObjectDetectionModelBase
 from ...data.utils.converter import toVisualizeRectLabelRGBimg
 

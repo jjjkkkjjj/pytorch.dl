@@ -1,10 +1,10 @@
 from .base import SSDvggBase, SSDTrainConfig, SSDValConfig, load_vgg_weights
 from ..._utils import _check_ins
 from ..layers import *
-from dl.models.ssd.core.dbox import DBoxTextBoxOriginal
-from dl.models.ssd.core.codec import TextBoxCodec
-from .core.predict import TextBoxPredictor
-from .core.inference import InferenceBox, textbox_non_maximum_suppression
+from dl.models.ssd.modules.dbox import DBoxTextBoxOriginal
+from dl.models.ssd.modules.codec import TextBoxCodec
+from .modules.predict import TextBoxPredictor
+from .modules.inference import InferenceBox, textbox_non_maximum_suppression
 from ...data.utils.converter import toVisualizeQuadsLabelRGBimg
 
 from torch import nn

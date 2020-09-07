@@ -1,5 +1,6 @@
 from ....data.utils.boxes import centroids2corners, iou
 from ....data.utils.quads import quads_iou
+from ....data.utils.inference import non_maximum_suppression as nms
 from ...._utils import _check_ins
 
 from torch.nn import Module
@@ -93,35 +94,8 @@ def non_maximum_suppression(pred, val_config):
     iou_threshold = val_config.iou_threshold
     topk = val_config.topk
 
-    # sort confidence and default boxes with descending order
-    c, conf_des_inds = conf.sort(dim=0, descending=True)
-    # get topk indices
-    conf_des_inds = conf_des_inds[:topk]
-    # converted into minmax coordinates
-    loc_mm = centroids2corners(loc)
+    inferred_indices = nms(conf, centroids2corners(loc), topk, iou_threshold, iou)
 
-    inferred_indices = []
-    while conf_des_inds.nelement() > 0:
-        largest_conf_index = conf_des_inds[0]
-
-        largest_conf_loc = loc[largest_conf_index, :].unsqueeze(0)  # shape = (1, 4=(xmin, ymin, xmax, ymax))
-        # append to result
-        inferred_indices.append(largest_conf_index)
-
-        # remove largest element
-        conf_des_inds = conf_des_inds[1:]
-
-        if conf_des_inds.nelement() == 0:
-            break
-
-        # get iou, shape = (1, loc_des num)
-        overlap = iou(centroids2corners(largest_conf_loc), loc_mm[conf_des_inds])
-        # filter out overlapped boxes for box with largest conf, shape = (loc_des num)
-        indicator = overlap.reshape((overlap.nelement())) <= iou_threshold
-
-        conf_des_inds = conf_des_inds[indicator]
-
-    inferred_indices = torch.Tensor(inferred_indices).long()
     return inferred_indices, conf[inferred_indices], loc[inferred_indices]
 
 
@@ -136,34 +110,7 @@ def non_maximum_suppression_quads(pred, val_config):
 
     loc, quad, conf = pred[:, :4], pred[:, 4:12], pred[:, -1]
 
-    # sort confidence and default boxes with descending order
-    c, conf_des_inds = conf.sort(dim=0, descending=True)
-    # get topk indices
-    conf_des_inds = conf_des_inds[:topk]
-
-    inferred_indices = []
-    while conf_des_inds.nelement() > 0:
-        largest_conf_index = conf_des_inds[0]
-        # conf[largest_conf_index]'s shape = []
-        largest_conf = conf[largest_conf_index].unsqueeze(0).unsqueeze(0)  # shape = (1, 1)
-        largest_conf_quad = quad[largest_conf_index, :].unsqueeze(0)  # shape = (1, 4=(xmin, ymin, xmax, ymax))
-        # append to result
-        inferred_indices.append(largest_conf_index)
-
-        # remove largest element
-        conf_des_inds = conf_des_inds[1:]
-
-        if conf_des_inds.nelement() == 0:
-            break
-
-        # get iou, shape = (1, loc_des num)
-        overlap = quads_iou(largest_conf_quad, quad[conf_des_inds])
-        # filter out overlapped boxes for box with largest conf, shape = (loc_des num)
-        indicator = overlap.reshape((overlap.nelement())) <= iou_threshold2
-
-        conf_des_inds = conf_des_inds[indicator]
-
-    inferred_indices = torch.Tensor(inferred_indices).long()
+    inferred_indices = nms(conf, quad, topk, iou_threshold2, quads_iou)
     return inferred_indices, conf[inferred_indices], torch.cat((loc[inferred_indices], quad[inferred_indices]), dim=1)
 
 
@@ -183,8 +130,9 @@ def textbox_non_maximum_suppression(pred, val_config):
     if indices.nelement() == 0:
         return indices, conf[indices], torch.cat((loc[indices], quad[indices]), dim=1)
 
-    non_maximum_suppression_quads(pred[indices], val_config)
-
+    pred = pred[indices]
+    indices, _, _ = non_maximum_suppression_quads(pred, val_config)
+    loc, quad, conf = pred[:, :4], pred[:, 4:12], pred[:, -1]
 
     return indices, conf[indices], torch.cat((loc[indices], quad[indices]), dim=1)
 

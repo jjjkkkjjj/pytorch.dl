@@ -29,8 +29,9 @@ if __name__ == '__main__':
 
     model = TextBoxesPP(input_shape=(size[0], size[1], 3)).cuda()
     print(model)
-    #model.load_weights('./weights/model_icdar15.pth')
-    model.load_weights('../../weights/train-all-stage2-batch8_i-24000.pth')
+    model.load_weights('../../weights/icdar2015/train-icdar2015-stage2-batch16_i-16000.pth')
+    #model.load_weights('../../weights/synthtext/pretrained-synthtext_i-60000.pth')
+    #model.load_weights('../../weights/train-all-stage2-batch8_i-24000.pth')
     model.eval()
 
     image = cv2.cvtColor(cv2.imread('../../scripts/textboxes++/assets/test.png'), cv2.COLOR_BGR2RGB)

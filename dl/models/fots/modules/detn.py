@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import math
 
-from .base import DetectorBase
+from ..base import DetectorBase
 
 class Detector(DetectorBase):
     def __init__(self, in_channels, dist_scale=512):

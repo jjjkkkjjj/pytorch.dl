@@ -5,8 +5,8 @@ import torch.nn.functional as F
 from math import sqrt as sqrt
 from itertools import product as product
 
-from dl.models.ssd.core.boxes import DBoxSSDOriginal
-from dl.models.ssd.core.boxes import SSDCodec
+from dl.models.ssd.modules.boxes import DBoxSSDOriginal
+from dl.models.ssd.modules.boxes import SSDCodec
 
 import os
 

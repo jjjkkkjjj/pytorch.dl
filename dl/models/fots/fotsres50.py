@@ -1,7 +1,7 @@
 from .base import FOTSBase
-from .detn import Detector
-from .featextr import SharedConvRes50
-from .recog import CRNN
+from dl.models.fots.modules.detn import Detector
+from dl.models.fots.modules.featextr import SharedConvRes50
+from dl.models.fots.modules.recog import CRNN
 
 
 class FOTSRes50(FOTSBase):
