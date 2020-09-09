@@ -87,11 +87,11 @@ def locally_aware_nms(confs, values, topk, threshold, compare_func, **funckwargs
             prev_conf, prev_value = weighted_merge(prev_conf, prev_value, confs[n], values[n])
         else:
             new_confs += [confs[n]]
-            new_values += [values[n]]
+            new_values += [values[n].unsqueeze(0)]
             indices += [n]
             prev_conf, prev_value = confs[n], values[n]
 
-    new_confs, new_values, inferred_indices = torch.tensor(new_confs, dtype=torch.float), torch.tensor(new_values, dtype=torch.float), torch.tensor(indices, dtype=torch.long)
+    new_confs, new_values, inferred_indices = torch.tensor(new_confs, dtype=torch.float), torch.cat(new_values, dim=0), torch.tensor(indices, dtype=torch.long)
 
     if inferred_indices.numel() == 0:
         return torch.Tensor([]).bool()
