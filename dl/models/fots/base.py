@@ -4,10 +4,11 @@ from torch import nn
 from ..base.model import TextSpottingModelBase
 from ...data.utils.inference import locally_aware_nms
 from ...data.utils.quads import rboxes2quads_numpy, quads_iou
+from ...data.utils.converter import toVisualizeQuadsTextRGBimg
 from .modules.roi import RoIRotate
 from .modules.recog import CRNNBase
 from .modules.utils import matching_strategy
-from ..._utils import _check_retval, _check_ins
+from ..._utils import _check_retval, _check_ins, _check_image, _get_normed_and_origin_img
 
 class FeatureExtractorBase(nn.Module):
     def __init__(self, out_channels):
@@ -17,6 +18,21 @@ class FeatureExtractorBase(nn.Module):
 class DetectorBase(nn.Module):
     pass
 
+class FOTSTrainConfig(object):
+    def __init__(self, **kwargs):
+        self.chars = _check_ins('chars', kwargs.get('chars'), (tuple, list))
+
+        input_shape = kwargs.get('input_shape')
+        assert len(input_shape) == 3, "input dimension must be 3"
+        assert input_shape[0] == input_shape[1], "input must be square size"
+        self.input_shape = input_shape
+
+        self.shrink_scale = _check_ins('shrink_scale', kwargs.get('shrink_scale', 0.3), (float, int))
+
+        self.rgb_means = _check_ins('rgb_means', kwargs.get('rgb_means', (0.485, 0.456, 0.406)), (tuple, list, float, int))
+        self.rgb_stds = _check_ins('rgb_stds', kwargs.get('rgb_stds', (0.229, 0.224, 0.225)), (tuple, list, float, int))
+
+
 class FOTSValConfig(object):
     def __init__(self, **kwargs):
         self.conf_threshold = _check_ins('conf_threshold', kwargs.get('conf_threshold', 0.5), float)
@@ -24,10 +40,14 @@ class FOTSValConfig(object):
         self.topk = _check_ins('topk', kwargs.get('topk', 200), int)
 
 class FOTSBase(TextSpottingModelBase):
+    _train_config: FOTSTrainConfig
     _val_config: FOTSValConfig
     
-    def __init__(self, chars, input_shape, shrink_scale, val_config):
-        super().__init__(chars, input_shape)
+    def __init__(self, train_config, val_config):
+        self._train_config = _check_ins('train_config', train_config, FOTSTrainConfig)
+        self._val_config = _check_ins('val_config', val_config, FOTSValConfig)
+
+        super().__init__(train_config.chars, train_config.input_shape)
 
         self.feature_extractor = _check_retval('build_feature_extractor', self.build_feature_extractor(), FeatureExtractorBase)
         self.detector = _check_retval('build_detector', self.build_detector(), DetectorBase)
@@ -35,17 +55,38 @@ class FOTSBase(TextSpottingModelBase):
         self.roi_rotate = RoIRotate()
         self.recognizer = _check_retval('build_recognizer', self.build_recognizer(), CRNNBase)
 
-        self._shrink_scale = _check_ins('shrink_scale', shrink_scale, (float, int))
-        self._val_config = _check_ins('val_config', val_config, FOTSValConfig, allow_none=True, default=FOTSValConfig())
-    
+
+    # train property
+    @property
+    def shrink_scale(self):
+        return self._train_config.shrink_scale
+    @property
+    def rbg_means(self):
+        return self._train_config.rgb_means
+    @property
+    def std_means(self):
+        return self._train_config.rgb_stds
+    @property
+    def dist_scale(self):
+        if self.input_width is None and self.input_height is None:
+            logging.warning("Input width and height is set to None, so use 160 which default value as dist_scale.\n"
+                            "160 is from 640/4")
+            return 160
+        else:
+            if self.input_width and self.input_height:
+                return max(self.input_width, self.input_height)
+            elif self.input_width:
+                return self.input_width
+            else:
+                return self.input_height
+
+    # val property
     @property
     def conf_threshold(self):
         return self._val_config.conf_threshold
-
     @property
     def iou_threshold(self):
         return self._val_config.iou_threshold
-
     @property
     def topk(self):
         return self._val_config.topk
@@ -105,7 +146,7 @@ class FOTSBase(TextSpottingModelBase):
             # create pos_indicator and rboxes from label
             _, _, h, w = fmaps.shape
             device = fmaps.device
-            pos_indicator, true_rboxes = matching_strategy(labels, w, h, device, scale=self._shrink_scale)
+            pos_indicator, true_rboxes = matching_strategy(labels, w, h, device, scale=self.shrink_scale)
 
             # RoI Rotate Branch
             # list(b) of Tensor, shape = (text nums, c, height=8, non-fixed width)
@@ -174,3 +215,28 @@ class FOTSBase(TextSpottingModelBase):
                     ret_texts += [out_txt]
 
                 return ret_quads, ret_raws, ret_texts
+
+    def infer(self, image, conf_threshold=None, toNorm=False, visualize=False):
+        if self.training:
+            raise NotImplementedError("call \'eval()\' first")
+
+        # img: Tensor, shape = (b, c, h, w)
+        img, orig_imgs = _check_image(image, self.device, size=(self.input_width, self.input_height))
+
+        # normed_img, orig_img: Tensor, shape = (b, c, h, w)
+        normed_imgs, orig_imgs = _get_normed_and_origin_img(img, orig_imgs, self.rgb_means, self.rgb_stds, toNorm,
+                                                            self.device)
+
+        if list(img.shape[1:]) != [self.input_channel, self.input_height, self.input_width]:
+            raise ValueError('image shape was not same as input shape: {}, but got {}'.format(
+                [self.input_channel, self.input_height, self.input_width], list(img.shape[1:])))
+
+        inf_quads, inf_raws, inf_texts = self(normed_imgs)
+
+        img_num = normed_imgs.shape[0]
+        if visualize:
+            visualized_imgs = [toVisualizeQuadsTextRGBimg(orig_imgs[i], poly_pts=inf_quads[i], tensor2cvimg=False, verbose=False)
+                               for i in range(img_num)]
+            return (inf_quads, inf_raws, inf_texts), visualized_imgs, orig_imgs
+        else:
+            return (inf_quads, inf_raws, inf_texts), orig_imgs
