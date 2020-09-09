@@ -2,6 +2,7 @@ import cv2, math, torch
 import numpy as np
 
 from .boxes import centroids2corners
+from .points import apply_affine
 
 def tensor2cvrgbimg(img, to8bit=True):
     if to8bit:
@@ -28,7 +29,7 @@ def toVisualizeRectRGBimg(img, locs, thickness=2, rgb=(255, 0, 0), tensor2cvimg=
     #cv2.imshow('a', img)
     #cv2.waitKey()
     # print(locs)
-    locs_mm = centroids2corners(locs).cpu().numpy()
+    locs_mm = centroids2corners(locs).cpu().numpy().copy()
 
     h, w, c = img.shape
     locs_mm[:, 0::2] *= w
@@ -95,7 +96,7 @@ def toVisualizeRectLabelRGBimg(img, locs, inf_labels, classe_labels, inf_confs=N
 
     h, w, c = img.shape
     # print(locs)
-    locs_mm = centroids2corners(locs).cpu().numpy()
+    locs_mm = centroids2corners(locs).cpu().numpy().copy()
     locs_mm[:, ::2] *= w
     locs_mm[:, 1::2] *= h
     locs_mm = locs_mm
@@ -163,7 +164,7 @@ def toVisualizeQuadsRGBimg(img, poly_pts, thickness=2, rgb=(255, 0, 0), verbose=
     #cv2.imshow('a', img)
     #cv2.waitKey()
     # print(locs)
-    poly_pts_mm = poly_pts.detach().numpy()
+    poly_pts_mm = poly_pts.detach().numpy().copy()
 
     h, w, c = img.shape
 
@@ -208,7 +209,7 @@ def toVisualizeQuadsLabelRGBimg(img, poly_pts, inf_labels, classe_labels, inf_co
     #cv2.imshow('a', img)
     #cv2.waitKey()
     # print(locs)
-    poly_pts_mm = poly_pts.cpu().numpy()
+    poly_pts_mm = poly_pts.cpu().numpy().copy()
 
     class_num = len(classe_labels)
     box_num = poly_pts.shape[0]
@@ -260,5 +261,78 @@ def toVisualizeQuadsLabelRGBimg(img, poly_pts, inf_labels, classe_labels, inf_co
         if verbose:
             print(pts)
         cv2.polylines(img, [pts], isClosed=True, color=rgb, thickness=thickness)
+
+    return img
+
+
+def toVisualizeQuadsTextRGBimg(img, poly_pts, texts, thickness=2, rgb=(255, 0, 0), tensor2cvimg=True, verbose=False):
+    """
+    :param img: Tensor, shape = (c, h, w)
+    :param poly_pts: list of Tensor, centered coordinates, shape = (box num, ?*2=(x1, y1, x2, y2,... clockwise from top-left)).
+    :param texts:
+    :param classe_labels: list of str
+    :param inf_confs: Tensor, (box_num,)
+    :param tensor2cvimg: bool, whether to convert Tensor to cvimg
+    :param verbose: bool, whether to show information
+    :return:
+        img: RGB order
+    """
+    # convert (c, h, w) to (h, w, c)
+    if tensor2cvimg:
+        img = tensor2cvrgbimg(img, to8bit=True).copy()
+    else:
+        if not isinstance(img, np.ndarray):
+            raise ValueError('img must be Tensor, but got {}. if you pass \'Tensor\' img, set tensor2cvimg=True'.format(type(img).__name__))
+
+
+    #cv2.imshow('a', img)
+    #cv2.waitKey()
+    # print(locs)
+    poly_pts_mm = poly_pts.cpu().numpy().copy()
+
+    h, w, c = img.shape
+
+    if verbose:
+        print(poly_pts)
+    for bnum in range(poly_pts_mm.shape[0]):
+        img = img.copy()
+        pts = poly_pts_mm[bnum]
+        pts[0::2] *= w
+        pts[1::2] *= h
+        pts[0::2] = np.clip(pts[0::2], 0, w)
+        pts[1::2] = np.clip(pts[1::2], 0, h)
+        #print(pts)
+        pts = pts.reshape((-1, 1, 2)).astype(int)
+        #print(pts)
+
+        labelSize = cv2.getTextSize(texts[bnum], cv2.FONT_HERSHEY_COMPLEX, 0.4, 1)
+        rect_topleft = tuple(pts[0, 0, :2])
+
+        # text area
+        text_bottomleft = (rect_topleft[0], rect_topleft[1] + int(labelSize[0][1] * 1.5))
+        text_topright = (rect_topleft[0] + labelSize[0][0], rect_topleft[1])
+        text_polys = np.array([[text_bottomleft[0], text_topright[1]],
+                               [text_topright[0], text_topright[1]],
+                               [text_topright[0], text_bottomleft[1]],
+                               [text_bottomleft[0], text_bottomleft[1]]])
+
+        text_img = np.zeros_like(img, dtype=np.uint8)
+        cv2.fillPoly(text_img, [text_polys.astype(np.int)], rgb, lineType=cv2.LINE_AA)
+
+        text_bottomleft = (rect_topleft[0], rect_topleft[1] + labelSize[0][1])
+        cv2.putText(text_img, texts[bnum], text_bottomleft, cv2.FONT_HERSHEY_COMPLEX, 0.4, (1, 0, 0), 1)
+
+        # rotate from top-left
+        angle = np.rad2deg(np.arctan2(-(pts[1, 0, 1] - pts[0, 0, 1]), pts[1, 0, 0] - pts[0, 0, 0]))
+        affine = cv2.getRotationMatrix2D(tuple(text_polys[0]), angle, 1.0)
+
+        text_img = cv2.warpAffine(text_img, affine, (w, h))
+
+        if verbose:
+            print(pts)
+        cv2.polylines(img, [pts], isClosed=True, color=rgb, thickness=thickness)
+
+        mask = np.any(text_img > 0, axis=-1)
+        img[mask] = text_img[mask]
 
     return img
