@@ -42,9 +42,9 @@ class RandomRotate(object):
             angle = random.uniform(self.amin, self.amax)
             if self.fit:
                 radian = np.radians(angle)
-                sine = np.abs(np.sin(radian))
-                cosine = np.abs(np.cos(radian))
-                tri_mat = np.array([[cosine, sine], [sine, cosine]], np.float32)
+                sine = np.sin(radian)
+                cosine = np.cos(radian)
+                tri_mat = np.array([[cosine, sine], [-sine, cosine]], np.float32)
                 old_size = np.array([w, h], np.float32)
                 new_size = np.ravel(tri_mat @ old_size.reshape(-1, 1))
 
