@@ -27,7 +27,7 @@ class RoIRotate(Module):
             widths = []
             matrices = []
 
-            _quads = quads[b].cpu().numpy()
+            _quads = quads[b].cpu().numpy().copy()
             _quads[:, ::2] *= w
             _quads[:, 1::2] *= h
 

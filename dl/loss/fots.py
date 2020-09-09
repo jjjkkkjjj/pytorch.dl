@@ -58,8 +58,8 @@ class DetectionLoss(nn.Module):
         """
         :param pos_indicator: bool Tensor, shape = (b, h/4, w/4)
         :param pred_confs: confidence Tensor, shape = (b, h/4, w/4, 1)
-        :param pred_rboxes: predicted Tensor, shape = (b, h/4, w/4, 5=(t, l, b, r, angle))
-                    distances: distances Tensor, shape = (b, h/4, w/4, 4=(t, l, b, r)) for each pixel to target rectangle boundaries
+        :param pred_rboxes: predicted Tensor, shape = (b, h/4, w/4, 5=(t, r, b, l, angle))
+                    distances: distances Tensor, shape = (b, h/4, w/4, 4=(t, r, b, l)) for each pixel to target rectangle boundaries
                     angle: angle Tensor, shape = (b, h/4, w/4, 1)
         :param true_rboxes: true Tensor, shape = (text b, h/4, w/4, 5=(t, r, b, l, angle))
         :return: loss: loss Tensor, shape = (b,)
@@ -185,7 +185,7 @@ class RegressionLoss(nn.Module):
             pos_t_angles = true_angles[b][mask]
 
             orient_loss = 1 - torch.cos(pos_p_angles - pos_t_angles)
-            loc_loss = iou_dists(pos_p_dists, pos_t_dists)
+            loc_loss = -torch.log(iou_dists(pos_p_dists, pos_t_dists))
 
             # online hard example mining
             hard_pos_indices, rand_pos_indices, sample_nums = ohem(pos_p_confs, hard_sample_nums=self.hard_pos_num,

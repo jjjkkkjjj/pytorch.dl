@@ -5,7 +5,7 @@ import math
 from ..base import DetectorBase
 
 class Detector(DetectorBase):
-    def __init__(self, in_channels, dist_scale=512):
+    def __init__(self, in_channels, dist_scale=160):
         super().__init__()
         self.in_channels = in_channels
         self.dist_scale = dist_scale

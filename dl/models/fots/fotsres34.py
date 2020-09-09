@@ -12,7 +12,7 @@ class FOTSRes34(FOTSBase):
         return SharedConvRes34(out_channels=32)
 
     def build_detector(self):
-        return Detector(in_channels=32, dist_scale=512)
+        return Detector(in_channels=32, dist_scale=160)
 
     def build_recognizer(self):
         return CRNN(self.chars, (8, None, 32), 0)

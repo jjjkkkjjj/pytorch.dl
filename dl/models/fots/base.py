@@ -69,18 +69,23 @@ class FOTSBase(TextSpottingModelBase):
         :param labels: list(b) of Tensor, shape = (text number in image, 4=(rect)+8=(quads)+...)
         :param texts: list(b) of list(text number) of Tensor, shape = (characters number,)
         :returns:
-            detn:
-                pos_indicator: bool Tensor, shape = (b, h/4, w/4)
-                pred_confs: confidence Tensor, shape = (b, h/4, w/4, 1)
-                pred_rboxes: predicted Tensor, shape = (b, h/4, w/4, 5=(t, r, b, l, angle))
-                    distances: distances Tensor, shape = (b, h/4, w/4, 4=(t, r, b, l)) for each pixel to target rectangle boundaries
-                    angle: angle Tensor, shape = (b, h/4, w/4, 1)
-                true_rboxes: true Tensor, shape = (text b, h/4, w/4, 5=(t, r, b, l, angle))
-            recog:
-                pred_texts: list(b) of predicted text number Tensor, shape = (times, text nums, class_nums)
-                true_texts: list(b) of true text number Tensor, shape = (true text nums, char nums)
-                pred_txtlens: list(b) of length Tensor, shape = (text nums)
-                true_txtlens: list(b) of true length Tensor, shape = (true text nums)
+            if self.training is True:
+                detn:
+                    pos_indicator: bool Tensor, shape = (b, h/4, w/4)
+                    pred_confs: confidence Tensor, shape = (b, h/4, w/4, 1)
+                    pred_rboxes: predicted Tensor, shape = (b, h/4, w/4, 5=(t, r, b, l, angle))
+                        distances: distances Tensor, shape = (b, h/4, w/4, 4=(t, r, b, l)) for each pixel to target rectangle boundaries
+                        angle: angle Tensor, shape = (b, h/4, w/4, 1)
+                    true_rboxes: true Tensor, shape = (text b, h/4, w/4, 5=(t, r, b, l, angle))
+                recog:
+                    pred_texts: list(b) of predicted text number Tensor, shape = (times, text nums, class_nums)
+                    true_texts: list(b) of true text number Tensor, shape = (true text nums, char nums)
+                    pred_txtlens: list(b) of length Tensor, shape = (text nums)
+                    true_txtlens: list(b) of true length Tensor, shape = (true text nums)
+            else:
+                ret_quads: list(b) of Tensor, shape = (text nums, 8=(x1,y1,... clockwise from top-left))
+                ret_raws: list(b) of list(text nums) of str
+                ret_texts: list(b) of list(text nums) of str
         """
         if self.training and labels is None and texts is None:
             raise ValueError("pass \'labels\' and \'texts\' for training mode")
@@ -126,7 +131,7 @@ class FOTSBase(TextSpottingModelBase):
 
         else:
             with torch.no_grad():
-                batch_nums, _, _, _ = fmaps.shape
+                batch_nums, _, h, w = fmaps.shape
 
                 # convert rboxes into quads
                 # shape = (b, h, w, 8=(x1, y1,... clockwise order from top-left))
@@ -151,18 +156,21 @@ class FOTSBase(TextSpottingModelBase):
 
                     indices = locally_aware_nms(p_confs, p_quads, self.topk, self.iou_threshold, quads_iou)
 
+                    p_quads[:, ::2] /= w
+                    p_quads[:, 1::2] /= h
                     ret_quads += [p_quads[indices]]
 
                 # roi rotate
                 rotated_features = self.roi_rotate(fmaps, ret_quads)
 
                 # recognition
-                ret_texts = []
+                ret_raws, ret_texts = [], []
                 for b in range(batch_nums):
                     # preds: shape = (times, text_nums, class_labels)
                     # raw_txt: list(text_nums) of str, raw strings
                     # out_txt: list(text_nums) of str, decoded strings
                     ps, raw_txt, out_txt = self.recognizer(rotated_features[b])
+                    ret_raws += [raw_txt]
                     ret_texts += [out_txt]
 
-                return ret_quads, ret_texts
+                return ret_quads, ret_raws, ret_texts
