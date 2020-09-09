@@ -14,6 +14,9 @@ class CTCCodec(CodecBase):
         self.class_labels = class_labels
         self.blankIndex = blankIndex
 
+    @property
+    def blank(self):
+        return self.class_labels[self.blankIndex]
 
     def encoder(self, text_numbers):
         """
@@ -52,7 +55,7 @@ class CTCCodec(CodecBase):
             # gather multiple characters
             decoded = re.sub(r'(.)\1{1,}', r'\1', raw)
             # remove blank
-            decoded = str(decoded).replace('-', '')
+            decoded = str(decoded).replace(self.blank, '')
 
             raw_strings += [raw]
             decoded_strings += [decoded]
