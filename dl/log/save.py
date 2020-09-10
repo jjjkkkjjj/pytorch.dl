@@ -1,5 +1,5 @@
 from glob import glob
-from datetime import date
+from datetime import date, datetime
 import os, logging, re, torch, shutil
 import matplotlib.pyplot as plt
 
@@ -11,6 +11,7 @@ class SaveManager(object):
         :param interval: int, save for each designated iteration
         :param max_checkpoints: (Optional) int, how many dl will be saved during training.
         """
+        logging.getLogger().setLevel(level=logging.INFO)
         if max_checkpoints > 15:
             logging.warning('One model size will be about 0.1 GB. Please take care your storage.')
         save_checkpoints_dir = os.path.join(weightsdir, modelname, 'checkpoints')
@@ -33,14 +34,17 @@ class SaveManager(object):
         """
         savedir = os.path.join(weightsdir, modelname)
         if os.path.exists(savedir):
-            logging.warning('{} exist. Remove them?\nInput any key. [n]/y'.format(savedir))
+            dirname = modelname + datetime.now().strftime('-%Y%m%d-%H:%M:%S')
+
+            prev_savedir = savedir
+            savedir = os.path.join(weightsdir, dirname)
+            save_checkpoints_dir = os.path.join(weightsdir, dirname, 'checkpoints')
+            logging.warning('{} has already existed. Create {} instead? [y]/n'.format(prev_savedir, savedir))
             i = input()
-            if re.match(r'y|yes', i, flags=re.IGNORECASE):
-                shutil.rmtree(savedir)
-                logging.warning('Removed {}'.format(savedir))
-            else:
+            if re.match(r'n|no', i, flags=re.IGNORECASE):
                 logging.warning('Please rename them.')
                 exit()
+
 
         os.makedirs(savedir)
         logging.info('Created directory: {}'.format(savedir))
