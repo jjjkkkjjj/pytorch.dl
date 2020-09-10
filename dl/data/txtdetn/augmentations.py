@@ -16,12 +16,21 @@ from ..objdetn.augmentations import (
 
 
 class RandomRotate(object):
-    def __init__(self, fill_rgb=(103.939, 116.779, 123.68), center=(0, 0), amin=-10, amax=10, fit=True, p=0.5):
+    def __init__(self, fill_rgb=(103.939, 116.779, 123.68), center=(0, 0), amin=-10, amax=10, same=True, p=0.5):
+        """
+        Rotate randomly
+        :param fill_rgb: array-like
+        :param center: array-like
+        :param amin: int or float
+        :param amax: int or float
+        :param same: Bool, rotated image to return will be same as original size if True, otherwise, rotated one will be expanded
+        :param p: float or int
+        """
         self.fill_rgb = fill_rgb
         self.center = center
         self.amin = amin
         self.amax = amax
-        self.fit = fit
+        self.same = same
         self.p = p
 
     def __call__(self, img, labels, bboxes, flags, quads, texts):
@@ -40,33 +49,42 @@ class RandomRotate(object):
             box_nums = bboxes.shape[0]
 
             angle = random.uniform(self.amin, self.amax)
-            if self.fit:
-                radian = np.radians(angle)
-                sine = np.sin(radian)
-                cosine = np.cos(radian)
-                tri_mat = np.array([[cosine, sine], [-sine, cosine]], np.float32)
-                old_size = np.array([w, h], np.float32)
-                new_size = np.ravel(tri_mat @ old_size.reshape(-1, 1))
 
-                affine = cv2.getRotationMatrix2D((w / 2.0, h / 2.0), angle, 1.0)
-                # move
-                affine[:2, 2] += (new_size - old_size) / 2.0
+            # calculate new height and width
+            radian = np.radians(angle)
+
+            # consider rotated rectangle
+            sine = np.abs(np.sin(radian))
+            cosine = np.abs(np.cos(radian))
+
+            tri_mat = np.array([[cosine, sine], [sine, cosine]], np.float32)
+            original_img_size = np.array([w, h], np.float32)
+            rotated_img_size = np.ravel(tri_mat @ original_img_size.reshape(-1, 1))
+
+            affine = cv2.getRotationMatrix2D((w / 2.0, h / 2.0), angle, 1.0)
+            # move
+            affine[:2, 2] += (rotated_img_size - original_img_size) / 2.0
+
+            if self.same:
                 # resize
-                affine[:2, :] *= (old_size / new_size).reshape(-1, 1)
+                affine[:2, :] *= (original_img_size / rotated_img_size).reshape(-1, 1)
+                new_w, new_h = w, h
             else:
-                affine = cv2.getRotationMatrix2D(self.center, angle, 1.0)
+                new_w, new_h = rotated_img_size[0], rotated_img_size[1]
 
-            img = cv2.warpAffine(img, affine, (w, h), borderValue=self.fill_rgb)
+            img = cv2.warpAffine(img, affine, (new_w, new_h), borderValue=self.fill_rgb)
 
             # shape = (box nums, 4, 2=(x,y))
-            affined_quads = apply_affine(affine, (w, h), (w, h), quads.reshape(-1, 4, 2))
+            affined_quads = apply_affine(affine, (w, h), (new_w, new_h), quads.reshape(-1, 4, 2))
 
             quads = affined_quads.reshape(box_nums, 8)
 
             # xmin and ymin
-            bboxes[:, 0:2] = np.min(affined_quads, axis=1)
+            bboxes[:, 0] = quads[:, ::2].min(axis=-1)
+            bboxes[:, 1] = quads[:, 1::2].min(axis=-1)
             # xmax and ymax
-            bboxes[:, 2:4] = np.max(affined_quads, axis=1)
+            bboxes[:, 2] = quads[:, ::2].max(axis=-1)
+            bboxes[:, 3] = quads[:, 1::2].max(axis=-1)
 
         return img, (labels, bboxes, flags, quads, texts)
 
@@ -310,22 +328,26 @@ class RandomSimpleCropPatch(_SampledPatchOp):
         ret_bboxes[:, ::2] = np.clip(ret_bboxes[:, ::2], 0, w)
         ret_bboxes[:, 1::2] = np.clip(ret_bboxes[:, 1::2], 0, h)
 
-        # count up boxes inside cropped box
-        insidebox_inds = (ret_bboxes[:, 0] >= cropped_xmin) & \
-                         (ret_bboxes[:, 1] >= cropped_ymin) & \
-                         (ret_bboxes[:, 2] < cropped_xmax) & \
-                         (ret_bboxes[:, 3] < cropped_ymax)
-
-        if insidebox_inds.sum() == 0:
-            raise _SampledPatchOp.UnSatisfy
-
-        img = img[cropped_ymin:cropped_ymax, cropped_xmin:cropped_xmax]
-
         # move and convert to percent
         ret_bboxes[:, ::2] = (ret_bboxes[:, ::2] - cropped_xmin)/new_w
         ret_bboxes[:, 1::2] = (ret_bboxes[:, 1::2] - cropped_ymin)/new_h
         ret_quads[:, ::2] = (ret_quads[:, ::2] - cropped_xmin)/new_w
         ret_quads[:, 1::2] = (ret_quads[:, 1::2] - cropped_ymin)/new_h
+
+        ret_bboxes[:, ::2] = np.clip(ret_bboxes[:, ::2], 0, 1)
+        ret_bboxes[:, 1::2] = np.clip(ret_bboxes[:, 1::2], 0, 1)
+        ret_quads[:, ::2] = np.clip(ret_quads[:, ::2], 0, 1)
+        ret_quads[:, 1::2] = np.clip(ret_quads[:, 1::2], 0, 1)
+
+        # count up boxes outside cropped box
+        insidebox_inds = (ret_bboxes[:, 0] == ret_bboxes[:, 2]) | (ret_bboxes[:, 1] == ret_bboxes[:, 3])
+        # convert to inside ones
+        insidebox_inds = np.logical_not(insidebox_inds)
+
+        if insidebox_inds.sum() == 0:
+            raise _SampledPatchOp.UnSatisfy
+
+        img = img[cropped_ymin:cropped_ymax, cropped_xmin:cropped_xmax]
 
         # cut off boxes outside cropped box
         ret_bboxes = ret_bboxes[insidebox_inds]
