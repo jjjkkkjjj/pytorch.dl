@@ -34,17 +34,19 @@ class SaveManager(object):
         """
         savedir = os.path.join(weightsdir, modelname)
         if os.path.exists(savedir):
-            dirname = modelname + datetime.now().strftime('-%Y%m%d-%H:%M:%S')
-
-            prev_savedir = savedir
-            savedir = os.path.join(weightsdir, dirname)
-            save_checkpoints_dir = os.path.join(weightsdir, dirname, 'checkpoints')
-            logging.warning('{} has already existed. Create {} instead? [y]/n'.format(prev_savedir, savedir))
+            _new_dirname = modelname + datetime.now().strftime('-%Y%m%d-%H:%M:%S')
+            _new_savedir = os.path.join(weightsdir, _new_dirname)
+            logging.warning('{} has already existed. Create {} instead? [y]/n/d (d|del|delete means delete all)'.format(savedir, _new_savedir))
             i = input()
             if re.match(r'n|no', i, flags=re.IGNORECASE):
                 logging.warning('Please rename them.')
                 exit()
-
+            elif re.match(r'd|del|delete', i, flags=re.IGNORECASE):
+                shutil.rmtree(savedir)
+                logging.info("Removed all files and directories in {}".format(savedir))
+            else:
+                savedir = _new_savedir
+                save_checkpoints_dir = os.path.join(weightsdir, _new_dirname, 'checkpoints')
 
         os.makedirs(savedir)
         logging.info('Created directory: {}'.format(savedir))
