@@ -58,8 +58,12 @@ def sort_clockwise_topleft_numpy(a):
     centroids = np.concatenate((a[:, ::2].mean(axis=-1, keepdims=True),
                                 a[:, 1::2].mean(axis=-1, keepdims=True)), axis=-1)
     sorted_a = np.zeros_like(a, dtype=np.float32)
+    reshaped_a = a.reshape((-1, 4, 2))
     for b in range(box_nums):
-        sorted_a[b] = np.array(sorted(a[b], key=lambda pt: np.arctan2(pt[1]-centroids[b,1], pt[0]-centroids[b,0])))
+        angles_from_centroids = np.arctan2(reshaped_a[b, :, 1]-centroids[b,1], reshaped_a[b, :, 0]-centroids[b,0])
+        # sort with descending order
+        inds = np.argsort(angles_from_centroids)[::-1]
+        sorted_a[b] = reshaped_a[b, inds].reshape(8)
 
     return sorted_a
 
