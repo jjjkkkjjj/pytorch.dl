@@ -50,21 +50,63 @@ def sort_clockwise_topleft(a):
 def sort_clockwise_topleft_numpy(a):
     """
     Sort corners points (x1, y1, x2, y2, ... clockwise from topleft)
-    :ref https://stackoverflow.com/questions/10846431/ordering-shuffled-points-that-can-be-joined-to-form-a-polygon-in-python
+    :ref https://gist.github.com/flashlib/e8261539915426866ae910d55a3f9959
     :param a: Quads ndarray, shape is (box nums, 8=(x1,y1,x2,y2,...))
     :return a: Quads ndarray, shape is (box nums, 8=(x1,y1,x2,y2,... clockwise from topleft))
     """
+    reshaped_a = a.reshape((-1, 4, 2))
+
+    # sort the points based on their x-coordinates
+    # shape = (box_nums, 4=points_nums, 1), the indices about 4 points
+    x_ascend_indices = np.argsort(reshaped_a[..., 0:1], axis=1)
+    # that's why take_along_axis's argument: axis is 1
+    # shape = (box_nums, 4=(x_ascending), 2=(x,y))
+    x_ascend = np.take_along_axis(reshaped_a, x_ascend_indices, axis=1)
+
+    # grab the left-most and right-most points from the sorted
+    # x-roodinate points
+    # shape = (box_nums, 2, 2=(x,y))
+    leftMost = x_ascend[:, :2]
+    rightMost = x_ascend[:, 2:]
+
+    # now, sort the left-most coordinates according to their
+    # y-coordinates so we can grab the top-left and bottom-left
+    # points, respectively
+    # shape = (box_nums, 2=points_nums), the indices about 2 points
+    leftMost_y_ascend_indices = np.argsort(leftMost[..., 1:2], axis=1)
+    # shape = (box_nums, 2, 2=(x,y))
+    leftMost_y_ascend = np.take_along_axis(leftMost, leftMost_y_ascend_indices, axis=1)
+    # shape = (box_nums, 1, 2=(x,y))
+    tl, bl = leftMost_y_ascend[:, 0:1], leftMost_y_ascend[:, 1:2]
+
+    # if use Euclidean distance, it will run in error when the object
+    # is trapezoid. So we should use the same simple y-coordinates order method.
+
+    # now, sort the right-most coordinates according to their
+    # y-coordinates so we can grab the top-right and bottom-right
+    # points, respectively
+    # shape = (box_nums, 2=points_nums), the indices about 2 points
+    rightMost_y_ascend_indices = np.argsort(rightMost[..., 1:2], axis=1)
+    # shape = (box_nums, 2, 2=(x,y))
+    rightMost_y_ascend = np.take_along_axis(rightMost, rightMost_y_ascend_indices, axis=1)
+    # shape = (box_nums, 1, 2=(x,y))
+    tr, br = rightMost_y_ascend[:, 0:1], rightMost_y_ascend[:, 1:2]
+
+    # return the coordinates in top-left, top-right,
+    # bottom-right, and bottom-left order
+    sorted_a = np.concatenate([tl, tr, br, bl], axis=1).reshape((-1, 8))
+
+    """
+    # :ref https://stackoverflow.com/questions/10846431/ordering-shuffled-points-that-can-be-joined-to-form-a-polygon-in-python
+    # below code is using arctan from centroids, but this method is not applicable for image-coordinates system?
     box_nums = a.shape[0]
     centroids = np.concatenate((a[:, ::2].mean(axis=-1, keepdims=True),
                                 a[:, 1::2].mean(axis=-1, keepdims=True)), axis=-1)
     sorted_a = np.zeros_like(a, dtype=np.float32)
     reshaped_a = a.reshape((-1, 4, 2))
     for b in range(box_nums):
-        angles_from_centroids = np.arctan2(reshaped_a[b, :, 1]-centroids[b,1], reshaped_a[b, :, 0]-centroids[b,0])
-        # sort with descending order
-        inds = np.argsort(angles_from_centroids)[::-1]
-        sorted_a[b] = reshaped_a[b, inds].reshape(8)
-
+        sorted_a[b] = np.array(sorted(reshaped_a[b], key=lambda pt: np.arctan2(pt[1]-centroids[b,1], pt[0]-centroids[b,0])))
+    """
     return sorted_a
 
 def quad2mask(quad, w, h, device):
