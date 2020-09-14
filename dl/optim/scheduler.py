@@ -15,7 +15,7 @@ class IterMultiStepLR(MultiStepLR, _IterLRScheduler):
     def get_lr(self):
         ret = super().get_lr()
         self.last_iteration = self.last_epoch
-        if self.last_iteration in self.milestones:
+        if self.last_iteration in self.milestones and self.verbose:
             print("\nIteration reached milestone: {}. Change lr={} to {}\n".format(self.last_iteration, self._prev_lr, ret))
 
         self._prev_lr = ret
