@@ -1,3 +1,5 @@
+import sys
+sys.path.append('../../')
 from dl.data.generator.synthtext import VOCGenerator
 
 import argparse

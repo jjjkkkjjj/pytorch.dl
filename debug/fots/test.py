@@ -7,11 +7,11 @@ from dl.data.utils.converter import toVisualizeQuadsTextRGBimg
 if __name__ == '__main__':
     model = FOTSRes50(chars=datasets.SynthText_char_labels_without_upper_blank, input_shape=(None, None, 3)).cuda()
     model.eval()
-    model.load_weights('../../weights/fots-res50/e2-res50-aug.pth')
+    model.load_weights('../../weights/fots-res50/fots-pretrain_model_e10.pth')
     print(model)
 
-    image = cv2.cvtColor(cv2.imread('../../scripts/fots/assets/test.jpg'), cv2.COLOR_BGR2RGB)
-    #image = cv2.cvtColor(cv2.imread('../../scripts/crnn/assets/demo.png'), cv2.COLOR_BGR2RGB)
+    #image = cv2.cvtColor(cv2.imread('../../scripts/fots/assets/test.jpg'), cv2.COLOR_BGR2RGB)
+    image = cv2.cvtColor(cv2.imread('../../scripts/fots/assets/demo.jpg'), cv2.COLOR_BGR2RGB)
     cv2.imshow('test image', cv2.resize(image, (640, 640)))
     cv2.waitKey()
 
