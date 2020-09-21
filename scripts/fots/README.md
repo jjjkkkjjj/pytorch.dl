@@ -32,7 +32,7 @@ The implementation of [FOTS](https://arxiv.org/abs/1801.01671) with PyTorch.
 
 - Train. See [demo/pre-train-SynthText.ipynb](../../demo/fots/train-synthtext.ipynb).
 
-- You can download pre-trained model (10 epoch) from [here](https://drive.google.com/file/d/1unqLYGhbORYHHWy7UtZkHA-C-MrN19mf/view?usp=sharing).
+- You can download pre-trained model (10 epoch) from [here](https://drive.google.com/file/d/1zRoxvhEMqayS5vACfSQuOYkHv4-wnCvp/view?usp=sharing).
 
 - Pre-trained model's output example;
 

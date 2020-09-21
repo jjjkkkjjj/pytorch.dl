@@ -48,7 +48,7 @@ if __name__ == '__main__':
                               num_workers=4,
                               pin_memory=True)
 
-    model = FOTSRes50(chars=datasets.SynthText_char_labels_without_upper_blank, input_shape=(None, None, 3)).cuda()
+    model = FOTSRes50(chars=datasets.SynthText_char_labels_without_upper_blank, input_shape=(None, None, 3), feature_height=8).cuda()
     print(model)
     """
     train_iter = iter(train_loader)

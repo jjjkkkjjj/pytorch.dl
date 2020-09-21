@@ -8,7 +8,7 @@ from ...data.utils.converter import toVisualizeQuadsTextRGBimg
 from .modules.roi import RoIRotate
 from .modules.recog import CRNNBase
 from .modules.utils import matching_strategy
-from ..._utils import _check_retval, _check_ins, _check_image, _get_normed_and_origin_img
+from ..._utils import _check_retval, _check_ins, _check_image, _get_normed_and_origin_img, _check_shape
 
 class FeatureExtractorBase(nn.Module):
     def __init__(self, out_channels):
@@ -28,6 +28,8 @@ class FOTSTrainConfig(object):
         self.input_shape = input_shape
 
         self.shrink_scale = _check_ins('shrink_scale', kwargs.get('shrink_scale', 0.3), (float, int))
+
+        self.feature_height = _check_ins('feature_height', kwargs.get('feature_height'), int)
 
         self.rgb_means = _check_ins('rgb_means', kwargs.get('rgb_means', (0.485, 0.456, 0.406)), (tuple, list, float, int))
         self.rgb_stds = _check_ins('rgb_stds', kwargs.get('rgb_stds', (0.229, 0.224, 0.225)), (tuple, list, float, int))
@@ -52,7 +54,7 @@ class FOTSBase(TextSpottingModelBase):
         self.feature_extractor = _check_retval('build_feature_extractor', self.build_feature_extractor(), FeatureExtractorBase)
         self.detector = _check_retval('build_detector', self.build_detector(), DetectorBase)
 
-        self.roi_rotate = RoIRotate()
+        self.roi_rotate = RoIRotate(height=self.feature_height)
         self.recognizer = _check_retval('build_recognizer', self.build_recognizer(), CRNNBase)
 
 
@@ -61,10 +63,13 @@ class FOTSBase(TextSpottingModelBase):
     def shrink_scale(self):
         return self._train_config.shrink_scale
     @property
-    def rbg_means(self):
+    def feature_height(self):
+        return self._train_config.feature_height
+    @property
+    def rgb_means(self):
         return self._train_config.rgb_means
     @property
-    def std_means(self):
+    def rgb_stds(self):
         return self._train_config.rgb_stds
     @property
     def dist_scale(self):
@@ -74,11 +79,11 @@ class FOTSBase(TextSpottingModelBase):
             return 160
         else:
             if self.input_width and self.input_height:
-                return max(self.input_width, self.input_height)
+                return int(max(self.input_width, self.input_height) / 4)
             elif self.input_width:
-                return self.input_width
+                return int(self.input_width / 4)
             else:
-                return self.input_height
+                return int(self.input_height / 4)
 
     # val property
     @property
@@ -227,16 +232,14 @@ class FOTSBase(TextSpottingModelBase):
         normed_imgs, orig_imgs = _get_normed_and_origin_img(img, orig_imgs, self.rgb_means, self.rgb_stds, toNorm,
                                                             self.device)
 
-        if list(img.shape[1:]) != [self.input_channel, self.input_height, self.input_width]:
-            raise ValueError('image shape was not same as input shape: {}, but got {}'.format(
-                [self.input_channel, self.input_height, self.input_width], list(img.shape[1:])))
+        _check_shape((self.input_channel, self.input_height, self.input_width), img.shape[1:])
 
         inf_quads, inf_raws, inf_texts = self(normed_imgs)
 
         img_num = normed_imgs.shape[0]
         if visualize:
-            visualized_imgs = [toVisualizeQuadsTextRGBimg(orig_imgs[i], poly_pts=inf_quads[i], tensor2cvimg=False, verbose=False)
-                               for i in range(img_num)]
+            visualized_imgs = [toVisualizeQuadsTextRGBimg(orig_imgs[i], poly_pts=inf_quads[i], texts=inf_texts[i],
+                                                          tensor2cvimg=False, verbose=False) for i in range(img_num)]
             return (inf_quads, inf_raws, inf_texts), visualized_imgs, orig_imgs
         else:
             return (inf_quads, inf_raws, inf_texts), orig_imgs

@@ -2,7 +2,7 @@ from torchvision.models.utils import load_state_dict_from_url
 import logging, os
 
 from ..._utils import (
-    _check_ins, _initialize_xavier_uniform,
+    _check_ins, _initialize_xavier_uniform, _check_shape,
     _check_image, _get_normed_and_origin_img, _get_model_url
 )
 from dl.models.ssd.modules.codec import *
@@ -314,9 +314,7 @@ class SSDBase(ObjectDetectionModelBase):
         # normed_img, orig_img: Tensor, shape = (b, c, h, w)
         normed_imgs, orig_imgs = _get_normed_and_origin_img(img, orig_imgs, self.rgb_means, self.rgb_stds, toNorm, self.device)
 
-        if list(img.shape[1:]) != [self.input_channel, self.input_height, self.input_width]:
-            raise ValueError('image shape was not same as input shape: {}, but got {}'.format([self.input_channel, self.input_height, self.input_width], list(img.shape[1:])))
-
+        _check_shape((self.input_channel, self.input_height, self.input_width), img.shape[1:])
 
         if conf_threshold is None:
             conf_threshold = self.vis_conf_threshold if visualize else self.val_conf_threshold

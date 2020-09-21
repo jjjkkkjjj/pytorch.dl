@@ -210,6 +210,22 @@ def _check_image(image, device, size=None):
     return img.to(device), orig_imgs
 
 
+def _check_shape(desired_shape, input_shape):
+    """
+    Note that desired_shape is allowed to have None, which means whatever input size is ok
+    :param desired_shape: array-like
+    :param input_shape: array-like
+    :return:
+    """
+    if len(desired_shape) != len(input_shape):
+        raise ValueError("shape dim was not same, got {} and {}".format(len(desired_shape), len(input_shape)))
+
+    for i, (des_d, inp_d) in enumerate(zip(desired_shape, input_shape)):
+        if des_d is None:
+            continue
+        if des_d != inp_d:
+            raise ValueError('dim:{} is invalid size, desired one: {}, but got {}'.format(i, des_d, inp_d))
+
 def _get_normed_and_origin_img(img, orig_imgs, rgb_means, rgb_stds, toNorm, device):
     """
     :param img: Tensor, shape = (b, c, h, w)
