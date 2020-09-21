@@ -35,7 +35,7 @@ class RoIRotate(Module):
             for t in range(textnums):
                 img = fmaps[b]
                 quad = _quads[t].reshape((4, 2))
-                tl, tr, bl, br = quad
+                tl, tr, br, bl = quad
 
                 # minAreaRect returns center_point, size, angle(deg)
                 _, size, _ = cv2.minAreaRect(quad)
@@ -61,12 +61,13 @@ class RoIRotate(Module):
                 # https://stackoverflow.com/questions/15956124/minarearect-angles-unsure-about-the-angle-returned/21427814#21427814
                 if box_w <= box_h:
                     box_w, box_h = box_h, box_w
-
+                if box_w == 0 or box_h == 0:
+                    print(quad)
                 # ceil is for avoiding to box_w = zero
                 box_w = math.ceil(self.height * box_w / box_h)
                 box_w = min(w, box_w)
 
-                src = np.float32([tl, tr, br])
+                src = np.float32([tl, tr, bl])
                 dst = np.float32([[0, 0], [box_w, 0], [0, self.height]])
 
                 # https://discuss.pytorch.org/t/affine-transformation-matrix-paramters-conversion/19522/17

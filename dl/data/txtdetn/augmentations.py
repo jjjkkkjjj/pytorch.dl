@@ -5,7 +5,7 @@ import logging, cv2
 from .._utils import _check_ins
 from ...data.utils.boxes import iou_numpy, coverage_numpy, corners2centroids_numpy
 from ...data.utils.points import apply_affine
-from ...data.utils.quads import quads2allmask_numpy
+from ...data.utils.quads import quads2allmask_numpy, sort_clockwise_topleft_numpy
 from ..objrecog.augmentations import *
 from ..objdetn.augmentations import (
     RandomExpand,
@@ -77,7 +77,7 @@ class RandomRotate(object):
             # shape = (box nums, 4, 2=(x,y))
             affined_quads = apply_affine(affine, (w, h), (new_w, new_h), quads.reshape(-1, 4, 2))
 
-            quads = affined_quads.reshape(box_nums, 8)
+            quads = sort_clockwise_topleft_numpy(affined_quads.reshape(box_nums, 8))
 
             # xmin and ymin
             bboxes[:, 0] = quads[:, ::2].min(axis=-1)
@@ -334,13 +334,22 @@ class RandomSimpleCropPatch(_SampledPatchOp):
         ret_quads[:, ::2] = (ret_quads[:, ::2] - cropped_xmin)/new_w
         ret_quads[:, 1::2] = (ret_quads[:, 1::2] - cropped_ymin)/new_h
 
-        ret_bboxes[:, ::2] = np.clip(ret_bboxes[:, ::2], 0, 1)
-        ret_bboxes[:, 1::2] = np.clip(ret_bboxes[:, 1::2], 0, 1)
-        ret_quads[:, ::2] = np.clip(ret_quads[:, ::2], 0, 1)
-        ret_quads[:, 1::2] = np.clip(ret_quads[:, 1::2], 0, 1)
+        ret_bboxes = np.clip(ret_bboxes, 0, 1)
+        ret_quads = np.clip(ret_quads, 0, 1)
 
-        # count up boxes outside cropped box
-        insidebox_inds = (ret_bboxes[:, 0] == ret_bboxes[:, 2]) | (ret_bboxes[:, 1] == ret_bboxes[:, 3])
+        # sort to avoid passing invalid quads such like
+        # [[  0.   0.]
+        #  [  1.   1.]
+        #  [  0.   0.]
+        #  [  1.   1.]]
+        ret_quads = sort_clockwise_topleft_numpy(ret_quads)
+
+        # count up boxes outside(invalid) cropped box
+        # outside(invalid) box is satisfied following;
+        # (x) tl_x == tr_x or br_x == bl_x or
+        # (y) tl_y == bl_y or tr_y == br_y
+        insidebox_inds = (ret_quads[:, 0] == ret_quads[:, 2]) | (ret_quads[:, 4] == ret_quads[:, 6]) | \
+                         (ret_quads[:, 1] == ret_quads[:, 7]) | (ret_quads[:, 3] == ret_quads[:, 5])
         # convert to inside ones
         insidebox_inds = np.logical_not(insidebox_inds)
 
