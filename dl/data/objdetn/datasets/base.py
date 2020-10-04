@@ -64,10 +64,8 @@ class ObjectDetectionDatasetBase(ObjectRecognitionDatasetBase):
             or
             = [cx, cy, w, h, label index(or relu_one-hotted label)]
         """
-        img = self._get_image(index)
-        targets = self._get_target(index)
+        img, targets = self.get_imgtarget(index)
 
-        img, targets = self.apply_transform(img, *targets)
         if len(targets) >= 3:
             labels, bboxes, flags = targets[:3]
         else:

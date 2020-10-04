@@ -22,6 +22,6 @@ Alphanumeric_with_upper_and_blank_numbers = 1 + Alphabet_with_upper_numbers + Nu
 
 class TextRecognitionDatasetBase(ObjectRecognitionDatasetBase):
     def __getitem__(self, index):
-        img, targets = super().__getitem__(index)
+        img, targets = self.get_imgtarget(index)
         texts = targets[0]
         return img, texts

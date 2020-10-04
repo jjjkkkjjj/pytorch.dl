@@ -40,7 +40,7 @@ class ObjectRecognitionDatasetBase(_DatasetBase):
         """
         raise NotImplementedError('\'_get_target\' must be overridden')
 
-    def __getitem__(self, index):
+    def get_imgtarget(self, index):
         """
         :param index: int
         :return:
@@ -53,6 +53,15 @@ class ObjectRecognitionDatasetBase(_DatasetBase):
         img, targets = self.apply_transform(img, *targets)
 
         return img, targets
+
+    def __getitem__(self, index):
+        """
+        :param index: int
+        :return:
+            img : rgb image(Tensor or ndarray)
+            targets : Tensor or array-like labels
+        """
+        return self.get_imgtarget(index)
 
     def apply_transform(self, img, *targets):
         """

@@ -18,10 +18,7 @@ class TextDetectionDatasetBase(ObjectDetectionDatasetBase):
                 = [cx, cy, w, h, x1, y1, x2, y2,..., label index(or relu_one-hotted label)]
                 texts: list of str, if it's illegal, str = ''
         """
-        img = self._get_image(index)
-        targets = self._get_target(index)
-
-        img, targets = self.apply_transform(img, *targets)
+        img, targets = self.get_imgtarget(index)
 
         labels, bboxes, flags, quads, texts = targets[:]
 
