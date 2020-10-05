@@ -6,8 +6,12 @@ from ..objrecog.target_transforms import (
     ToTensor
 )
 from .._utils import _check_ins
+from ..base.exceptions import _TargetTransformBaseException
 
 class Text2Number(object):
+    class NotContainError(_TargetTransformBaseException):
+        pass
+
     def __init__(self, class_labels, blankIndex=None, ignore_nolabel=True, toLower=True):
         self._class_labels = class_labels
 
@@ -28,6 +32,6 @@ class Text2Number(object):
                 if self._ignore_nolabel:
                     continue
                 else:
-                    raise ValueError('{} didn\'t contain ({})'.format(labels, ''.join(self._class_labels)))
+                    raise Text2Number.NotContainError('{} didn\'t contain ({})'.format(labels, ''.join(self._class_labels)))
 
         return (np.array(ret_labels), *args)

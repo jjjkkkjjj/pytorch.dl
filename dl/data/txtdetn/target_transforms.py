@@ -10,7 +10,8 @@ from ..objdetn.target_transforms import (
     Centroids2MinMax,
     MinMax2Corners,
     MinMax2Centroids,
-    OneHot
+    OneHot,
+    _TargetTransformBaseException
 )
 from ..objdetn.target_transforms import _IgnoreBase
 from ..txtrecog.target_transforms import Text2Number as _Text2Number
@@ -28,6 +29,9 @@ class Text2Number(object):
         return (bboxes, labels, flags, quads, ret_texts)
 
 class Ignore(_IgnoreBase):
+    class NoLabelsError(_TargetTransformBaseException):
+        pass
+
     supported_key = ['illegible', 'difficult', 'strange']
 
     def __init__(self, **kwargs):
@@ -87,7 +91,8 @@ class Ignore(_IgnoreBase):
             ret_quads += [quad]
             ret_texts += [text]
         if len(ret_bboxes) == 0:
-            logging.warning("No labels!!\nAll labels may have been ignored.")
+            #logging.warning("No labels!!\nAll labels may have been ignored.")
+            raise Ignore.NoLabelsError('All labels may have been ignored.')
         ret_bboxes = np.array(ret_bboxes, dtype=np.float32)
         ret_labels = np.array(ret_labels, dtype=np.float32)
         ret_quads = np.array(ret_quads, dtype=np.float32)

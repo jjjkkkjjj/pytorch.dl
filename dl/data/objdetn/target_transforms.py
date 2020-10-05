@@ -4,6 +4,7 @@ import logging
 
 from .._utils import _one_hot_encode, _check_ins
 from ..base.target_transforms import _IgnoreBase, Compose
+from ..base.exceptions import _TargetTransformBaseException
 from ..utils.boxes import *
 
 class ToTensor(object):

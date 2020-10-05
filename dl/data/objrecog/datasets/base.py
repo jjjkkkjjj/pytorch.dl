@@ -1,6 +1,8 @@
 import abc
+import numpy as np
 
-from ...base.datasets import _DatasetBase
+from ...base.datasets import _DatasetBase, reapply_in_exception, maximum_reapply
+from ...base.exceptions import _TargetTransformBaseException, MaximumReapplyError
 
 class ObjectRecognitionDatasetBase(_DatasetBase):
     def __init__(self, transform=None, target_transform=None, augmentation=None):
@@ -40,19 +42,27 @@ class ObjectRecognitionDatasetBase(_DatasetBase):
         """
         raise NotImplementedError('\'_get_target\' must be overridden')
 
-    def get_imgtarget(self, index):
+    def get_imgtarget(self, index, count=0):
         """
         :param index: int
         :return:
             img : rgb image(Tensor or ndarray)
             targets : Tensor or array-like labels
         """
-        img = self._get_image(index)
-        targets = self._get_target(index)
+        try:
+            img = self._get_image(index)
+            targets = self._get_target(index)
 
-        img, targets = self.apply_transform(img, *targets)
+            img, targets = self.apply_transform(img, *targets)
 
-        return img, targets
+            return img, targets
+        except _TargetTransformBaseException as e:
+            if count == maximum_reapply:
+                raise MaximumReapplyError('Maximum Reapplying reached: {}. last error was {}'.format(count, str(e)))
+            elif reapply_in_exception:
+                return self.get_imgtarget(np.random.randint(len(self)), count+1)
+            else:
+                raise e
 
     def __getitem__(self, index):
         """
