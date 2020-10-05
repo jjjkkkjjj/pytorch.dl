@@ -24,7 +24,6 @@ class FOTSTrainConfig(object):
 
         input_shape = kwargs.get('input_shape')
         assert len(input_shape) == 3, "input dimension must be 3"
-        assert input_shape[0] == input_shape[1], "input must be square size"
         self.input_shape = input_shape
 
         self.shrink_scale = _check_ins('shrink_scale', kwargs.get('shrink_scale', 0.3), (float, int))
@@ -243,3 +242,26 @@ class FOTSBase(TextSpottingModelBase):
             return (inf_quads, inf_raws, inf_texts), visualized_imgs, orig_imgs
         else:
             return (inf_quads, inf_raws, inf_texts), orig_imgs
+
+    def load_for_finetune(self, path):
+        """
+        load weights from pre-trained weights for fine tuning
+        :param path: str
+        :return: self
+        """
+        raise NotImplementedError()
+        """
+        pretrained_state_dict = torch.load(path, map_location=lambda storage, loc: storage)
+        model_state_dict = self.state_dict()
+
+        # rename
+        pre_keys, mod_keys = list(pretrained_state_dict.keys()), list(model_state_dict.keys())
+        renamed = [(pre_key, pretrained_state_dict[pre_key]) for pre_key in pre_keys if
+                   not ('conf' in pre_key or 'loc' in pre_key)]
+
+        # set vgg layer's parameters
+        model_state_dict.update(OrderedDict(renamed))
+        self.load_state_dict(model_state_dict, strict=False)
+
+        logging.info("model loaded")
+        """

@@ -22,6 +22,14 @@ class ModelBase(nn.Module):
     def init_weights(self):
         raise NotImplementedError()
 
+    def load_for_finetune(self, path):
+        """
+        load weights from pre-trained weights for fine tuning
+        :param path: str
+        :return: self
+        """
+        raise NotImplementedError()
+
 class ImageRecognitionBase(ModelBase):
     def __init__(self, class_labels, input_shape):
         """

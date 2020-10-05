@@ -4,7 +4,7 @@ from ...crnn.base import CRNNBase
 class CRNN(CRNNBase):
     def __init__(self, class_labels, input_shape, blankIndex):
         super().__init__(class_labels, input_shape, blankIndex)
-        assert self.input_height == 8, 'height must be 8'
+        #assert self.input_height == 8, 'height must be 8'
 
     def build_conv(self):
         conv_layers = [
@@ -31,7 +31,7 @@ class CRNN(CRNNBase):
 class CRNNin64(CRNNBase):
     def __init__(self, class_labels, input_shape, blankIndex):
         super().__init__(class_labels, input_shape, blankIndex)
-        assert self.input_height == 8, 'height must be 8'
+        #assert self.input_height == 8, 'height must be 8'
 
     def build_conv(self):
         conv_layers = [
