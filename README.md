@@ -34,6 +34,20 @@ pip install --upgrade git+https://github.com/jjjkkkjjj/pytorch.dl #--ignore-inst
 
   
 
+### FOTS
+
+- Detail
+
+  See [script](https://github.com/jjjkkkjjj/pytorch.dl/tree/master/scripts/fots) in detail.
+
+- Example
+
+  ![aa](./scripts/fots/assets/download.jpeg?raw=true "test")
+
+  ![aa-result](./scripts/fots/assets/download-result.png?raw=true "test")
+
+
+
 ### SSD
 
 - Detail
