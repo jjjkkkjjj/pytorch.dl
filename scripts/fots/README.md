@@ -30,14 +30,13 @@ The implementation of [FOTS](https://arxiv.org/abs/1801.01671) with PyTorch.
                           encoding
   ```
 
-- Train. See [demo/pre-train-SynthText.ipynb](../../demo/fots/train-synthtext.ipynb).
+- Train. See [demo/pre-train-SynthText.ipynb](../demo/fots/train-synthtext.ipynb).
 
 - You can download pre-trained model (10 epoch) from [here](https://drive.google.com/file/d/1zRoxvhEMqayS5vACfSQuOYkHv4-wnCvp/view?usp=sharing).
 
 - Pre-trained model's output example;
 
 ![pre-trained img](assets/pre-train-result.png?raw=true "pre-trained img")
-<!--
 # Train ICDAR2015
 
 - First, download dataset from [official](https://rrc.cvc.uab.es/?ch=4&com=downloads).
@@ -49,13 +48,19 @@ The implementation of [FOTS](https://arxiv.org/abs/1801.01671) with PyTorch.
   └── Images (place .jpg)
   ```
 
-- Train. See [demo/train-ICDAR2015.ipynb](../../demo/train-ICDAR2015.ipynb).
+- Train. See [demo/train-ICDAR2013+15.ipynb](../demo/fots/train-ICDAR2013+15.ipynb).
 
-- You can download pre-trained model from [here](https://drive.google.com/file/d/1vb7xnqClTy612qay7On1K37ZyAoulxd1/view?usp=sharing).
+- You can download pre-trained model from [here](https://drive.google.com/file/d/1zRoxvhEMqayS5vACfSQuOYkHv4-wnCvp/view?usp=sharing).
 
 - ICDAR's model output example;
 
-![icdar-trained img](assets/train-icdar-result.png?raw=true "icdar-trained img")
+![download.jpeg](assets/download.jpeg?raw=true "icdar-original img")
+
+![download-result.jpeg](assets/download-result.png?raw=true "icdar-trained img")
+
+
+
+<!--
 
 # Convert png to jpg for Born Digital Images
 
