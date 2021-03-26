@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 import numpy as np
 
 sys.path.append('...')
-from ..data.objdetn.datasets import _DatasetBase
+from ..data.objdetn.datasets import ImageDatasetBase
 from ..models.base import ObjectDetectionModelBase
 from .._utils import _check_ins
 from dl.models.ssd.modules.utils import iou_numpy, centroids2corners_numpy
@@ -15,7 +15,7 @@ from dl.models.ssd.modules.utils import iou_numpy, centroids2corners_numpy
 class EvaluatorBase(object):
     def __init__(self, dataloader, iteration_interval=5000, verbose=True, **eval_kwargs):
         self.dataloader = _check_ins('dataloader', dataloader, DataLoader)
-        self.dataset = _check_ins('dataloader.dataset', dataloader.dataset, _DatasetBase)
+        self.dataset = _check_ins('dataloader.dataset', dataloader.dataset, ImageDatasetBase)
         self.iteration_interval = _check_ins('iteration_interval', iteration_interval, int)
         self.verbose = verbose
         self.device = None
