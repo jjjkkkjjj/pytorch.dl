@@ -30,7 +30,7 @@ The implementation of [FOTS](https://arxiv.org/abs/1801.01671) with PyTorch.
                           encoding
   ```
 
-- Train. See [demo/pre-train-SynthText.ipynb](../demo/fots/train-synthtext.ipynb).
+- Train. See [demo/pre-train-SynthText.ipynb](../../demo/fots/train-synthtext.ipynb).
 
 - You can download pre-trained model (10 epoch) from [here](https://drive.google.com/file/d/1zRoxvhEMqayS5vACfSQuOYkHv4-wnCvp/view?usp=sharing).
 
@@ -48,7 +48,7 @@ The implementation of [FOTS](https://arxiv.org/abs/1801.01671) with PyTorch.
   └── Images (place .jpg)
   ```
 
-- Train. See [demo/train-ICDAR2013+15.ipynb](../demo/fots/train-ICDAR2013+15.ipynb).
+- Train. See [demo/train-ICDAR2013+15.ipynb](../../demo/fots/train-ICDAR2013+15.ipynb).
 
 - You can download pre-trained model from [here](https://drive.google.com/file/d/1zRoxvhEMqayS5vACfSQuOYkHv4-wnCvp/view?usp=sharing).
 
