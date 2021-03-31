@@ -1,4 +1,4 @@
-from .base import Compose, _DatasetBase
+from .base import Compose, ImageDatasetBase
 
 from .voc import *
 from .coco import *

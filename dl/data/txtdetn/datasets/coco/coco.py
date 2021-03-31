@@ -1,7 +1,8 @@
 import cv2, os, logging
 import numpy as np
 from .coco_text import COCO_Text
-from ..base import TextDetectionDatasetBase, Compose
+from ..base import TextDetectionDatasetBase, Compose, TextDetectionDatasetMixin
+from ....base.datasets import COCODatasetMixin
 
 from ...._utils import DATA_ROOT, _check_ins
 
@@ -9,94 +10,16 @@ COCOText_class_labels = ['text']
 COCOText_class_nums = len(COCOText_class_labels)
 
 COCO2014Text_ROOT = os.path.join(DATA_ROOT, 'coco', 'coco2014')
-class COCOTextSingleDatasetBase(TextDetectionDatasetBase):
-    def __init__(self, coco_dir, focus, image_dir, datasetTypes, ignore=None, transform=None, target_transform=None, augmentation=None):
-        """
-        :param coco_dir: str, coco directory path above 'annotations' and 'images'
-                e.g.) coco_dir = '~~~~/coco2007/trainval'
-        :param focus: str or str, directory name under images
-                e.g.) focus = 'train2014'
-        :param image_dir: str
-        :param datasetType: list of str, train, val or test
-        :param ignore: target_transforms.Ignore
-        :param transform: instance of transforms
-        :param target_transform: instance of target_transforms
-        :param augmentation:  instance of augmentations
-        """
-        super().__init__(ignore=ignore, transform=transform, target_transform=target_transform,
-                         augmentation=augmentation)
 
-        self._coco_dir = coco_dir
-        self._focus = focus
-        self._image_dir = image_dir
-
-        self._class_labels = COCOText_class_labels
-
-        self._annopath = os.path.join(self._coco_dir, 'annotations', self._focus + '.json')
-        if os.path.exists(self._annopath):
-            self._coco = COCO_Text(self._annopath)
-        else:
-            raise FileNotFoundError('json: {} was not found'.format(self._focus + '.json'))
-
-        # get all images containing at least one instance of legible text
-        datasetTypes = _check_ins('datasetTypes', datasetTypes, (list, tuple))
-        imgIds = []
-        _dataset_types = ['train', 'val', 'test']
-        for datasettype in datasetTypes:
-            if not datasettype in _dataset_types:
-                raise ValueError('Invalid argument: datasettype must be list of str, are {}, but got {}'.format(_dataset_types, datasettype))
-            imgIds.extend(self._coco.getImgIds(imgIds=eval('self._coco.{}'.format(datasettype)),
-                                               catIds=[('legibility', 'legible')]))
-            #imgIds.extend(self._coco.getImgIds(imgIds=eval('self._coco.{}'.format(datasettype)),
-            #                                   catIds=[('legibility', 'illegible')]))
-            #imgIds.extend(self._coco.getImgIds(imgIds=eval('self._coco.{}'.format(datasettype)),
-            #                                   catIds=[('class', 'machine printed')]))
-            #imgIds.extend(self._coco.getImgIds(imgIds=eval('self._coco.{}'.format(datasettype)),
-            #                                   catIds=[('class', 'handwritten')]))
-
-        self._imageids = list(set(imgIds))
-
-
+class COCOTextDatasetMixin(TextDetectionDatasetMixin, COCODatasetMixin):
+    _image_dir: str
+    _coco: COCO_Text
     def _jpgpath(self, filename):
         """
         :param filename: path containing .jpg
         :return: path of jpg
         """
         return os.path.join(self._coco_dir, 'images', self._image_dir, filename)
-
-    def __len__(self):
-        return len(self._imageids)
-
-    @property
-    def class_nums(self):
-        return len(self._class_labels)
-    @property
-    def class_labels(self):
-        return self._class_labels
-
-    def _get_image(self, index):
-        """
-        :param index: int
-        :return:
-            rgb image(ndarray)
-        """
-
-        """
-        self._coco.loadImgs(self._imageids[index]): list of dict, contains;
-            license: int
-            file_name: str
-            coco_url: str
-            height: int
-            width: int
-            date_captured: str
-            flickr_url: str
-            id: int
-        """
-        filename = self._coco.loadImgs(self._imageids[index])[0]['file_name']
-        img = cv2.imread(self._jpgpath(filename))
-        # pytorch's image order is rgb
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        return img.astype(np.float32)
 
     def _get_target(self, index):
         """
@@ -157,6 +80,65 @@ class COCOTextSingleDatasetBase(TextDetectionDatasetBase):
             """
 
         return np.array(linds, dtype=np.float32), np.array(bboxes, dtype=np.float32), flags, np.array(quads, dtype=np.float32), texts
+
+
+class COCOTextSingleDatasetBase(COCOTextDatasetMixin, TextDetectionDatasetBase):
+    def __init__(self, coco_dir, focus, image_dir, datasetTypes, ignore=None, transform=None, target_transform=None, augmentation=None):
+        """
+        :param coco_dir: str, coco directory path above 'annotations' and 'images'
+                e.g.) coco_dir = '~~~~/coco2007/trainval'
+        :param focus: str or str, directory name under images
+                e.g.) focus = 'train2014'
+        :param image_dir: str
+        :param datasetType: list of str, train, val or test
+        :param ignore: target_transforms.Ignore
+        :param transform: instance of transforms
+        :param target_transform: instance of target_transforms
+        :param augmentation:  instance of augmentations
+        """
+        super().__init__(ignore=ignore, transform=transform, target_transform=target_transform,
+                         augmentation=augmentation)
+
+        self._coco_dir = coco_dir
+        self._focus = focus
+        self._image_dir = image_dir
+
+        self._class_labels = COCOText_class_labels
+
+        self._annopath = os.path.join(self._coco_dir, 'annotations', self._focus + '.json')
+        if os.path.exists(self._annopath):
+            self._coco = COCO_Text(self._annopath)
+        else:
+            raise FileNotFoundError('json: {} was not found'.format(self._focus + '.json'))
+
+        # get all images containing at least one instance of legible text
+        datasetTypes = _check_ins('datasetTypes', datasetTypes, (list, tuple))
+        imgIds = []
+        _dataset_types = ['train', 'val', 'test']
+        for datasettype in datasetTypes:
+            if not datasettype in _dataset_types:
+                raise ValueError('Invalid argument: datasettype must be list of str, are {}, but got {}'.format(_dataset_types, datasettype))
+            imgIds.extend(self._coco.getImgIds(imgIds=eval('self._coco.{}'.format(datasettype)),
+                                               catIds=[('legibility', 'legible')]))
+            #imgIds.extend(self._coco.getImgIds(imgIds=eval('self._coco.{}'.format(datasettype)),
+            #                                   catIds=[('legibility', 'illegible')]))
+            #imgIds.extend(self._coco.getImgIds(imgIds=eval('self._coco.{}'.format(datasettype)),
+            #                                   catIds=[('class', 'machine printed')]))
+            #imgIds.extend(self._coco.getImgIds(imgIds=eval('self._coco.{}'.format(datasettype)),
+            #                                   catIds=[('class', 'handwritten')]))
+
+        self._imageids = list(set(imgIds))
+
+    def __len__(self):
+        return len(self._imageids)
+
+    @property
+    def class_nums(self):
+        return len(self._class_labels)
+    @property
+    def class_labels(self):
+        return self._class_labels
+
 
 class COCOTextMultiDatasetBase(Compose):
     def __init__(self, **kwargs):

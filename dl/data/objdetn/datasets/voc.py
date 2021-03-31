@@ -2,7 +2,8 @@ from xml.etree import ElementTree as ET
 import cv2, os
 import numpy as np
 
-from .base import ObjectDetectionDatasetBase, Compose
+from .base import ObjectDetectionDatasetMixin, Compose, ObjectDetectionDatasetBase
+from ...base.datasets import VOCDatasetMixin
 from ..._utils import DATA_ROOT, _get_xml_et_value, _check_ins
 
 VOC_class_labels = ['aeroplane', 'bicycle', 'bird', 'boat',
@@ -13,7 +14,38 @@ VOC_class_labels = ['aeroplane', 'bicycle', 'bird', 'boat',
 VOC_class_nums = len(VOC_class_labels)
 
 VOC2007_ROOT = os.path.join(DATA_ROOT, 'voc/voc2007/trainval/VOCdevkit/VOC2007')
-class VOCSingleDatasetBase(ObjectDetectionDatasetBase):
+
+class VOCDetectionDatasetMixin(ObjectDetectionDatasetMixin, VOCDatasetMixin):
+    def _get_target(self, index):
+        """
+        :param index: int
+        :return:
+            list of bboxes' label index, list of bboxes, list of flags([difficult, truncated,...])
+        """
+        linds = []
+        bboxes = []
+        flags = []
+
+        root = ET.parse(self._annopaths[index]).getroot()
+        for obj in root.iter('object'):
+            label = _get_xml_et_value(obj, 'name')
+            if label not in self.class_labels:
+                raise ValueError('Invalid label found. \'{}\' was not in labels: {}'.format(label, self._class_labels))
+            linds.append(self.class_labels.index(label))
+
+            bndbox = obj.find('bndbox')
+
+            # bbox = [xmin, ymin, xmax, ymax]
+            bboxes.append([_get_xml_et_value(bndbox, 'xmin', int), _get_xml_et_value(bndbox, 'ymin', int), _get_xml_et_value(bndbox, 'xmax', int), _get_xml_et_value(bndbox, 'ymax', int)])
+
+            flags.append({'difficult': _get_xml_et_value(obj, 'difficult', int) == 1,
+                          'truncated': _get_xml_et_value(obj, 'truncated', int) == 1,
+                          'occluded': _get_xml_et_value(obj, 'occluded', int) == 1})
+
+        return np.array(linds, dtype=np.float32), np.array(bboxes, dtype=np.float32), flags
+
+
+class VOCSingleDatasetBase(VOCDetectionDatasetMixin, ObjectDetectionDatasetBase):
     def __init__(self, voc_dir, focus, ignore=None, transform=None, target_transform=None, augmentation=None, class_labels=None):
         """
         :param voc_dir: str, voc directory path above 'Annotations', 'ImageSets' and 'JPEGImages'
@@ -49,60 +81,9 @@ class VOCSingleDatasetBase(ObjectDetectionDatasetBase):
     def class_labels(self):
         return self._class_labels
 
-    def _jpgpath(self, filename):
-        """
-        :param filename: path containing .jpg
-        :return: path of jpg
-        """
-        return os.path.join(self._voc_dir, 'JPEGImages', filename)
-
     def __len__(self):
         return len(self._annopaths)
 
-    """
-    Detail of contents in voc > https://towardsdatascience.com/coco-data-format-for-object-detection-a4c5eaf518c5
-
-    VOC bounding box (xmin, ymin, xmax, ymax)
-    """
-    def _get_image(self, index):
-        """
-        :param index: int
-        :return:
-            rgb image(ndarray)
-        """
-        root = ET.parse(self._annopaths[index]).getroot()
-        img = cv2.imread(self._jpgpath(_get_xml_et_value(root, 'filename')))
-        # pytorch's image order is rgb
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        return img.astype(np.float32)
-
-    def _get_target(self, index):
-        """
-        :param index: int
-        :return:
-            list of bboxes' label index, list of bboxes, list of flags([difficult, truncated,...])
-        """
-        linds = []
-        bboxes = []
-        flags = []
-
-        root = ET.parse(self._annopaths[index]).getroot()
-        for obj in root.iter('object'):
-            label = _get_xml_et_value(obj, 'name')
-            if label not in self._class_labels:
-                raise ValueError('Invalid label found. \'{}\' was not in labels: {}'.format(label, self._class_labels))
-            linds.append(self._class_labels.index(label))
-
-            bndbox = obj.find('bndbox')
-
-            # bbox = [xmin, ymin, xmax, ymax]
-            bboxes.append([_get_xml_et_value(bndbox, 'xmin', int), _get_xml_et_value(bndbox, 'ymin', int), _get_xml_et_value(bndbox, 'xmax', int), _get_xml_et_value(bndbox, 'ymax', int)])
-
-            flags.append({'difficult': _get_xml_et_value(obj, 'difficult', int) == 1,
-                          'truncated': _get_xml_et_value(obj, 'truncated', int) == 1,
-                          'occluded': _get_xml_et_value(obj, 'occluded', int) == 1})
-
-        return np.array(linds, dtype=np.float32), np.array(bboxes, dtype=np.float32), flags
 
 class VOCMultiDatasetBase(Compose):
     def __init__(self, **kwargs):

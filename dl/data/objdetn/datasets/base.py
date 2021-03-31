@@ -4,7 +4,7 @@ import abc
 
 from ..._utils import _check_ins, _contain_ignore
 from ...base.target_transforms import _IgnoreBase
-from ...base.datasets import _DatasetBase
+from ...base.datasets import ImageDatasetBase, Dataset
 from ...objrecog.datasets import ObjectRecognitionDatasetBase
 """
 ref > https://pytorch.org/tutorials/beginner/data_loading_tutorial.html
@@ -16,7 +16,23 @@ __getitem__ to support the indexing such that dataset[i] can be used to get ith 
 
 """
 
-class ObjectDetectionDatasetBase(ObjectRecognitionDatasetBase):
+class ObjectDetectionDatasetMixin:
+
+    @property
+    @abc.abstractmethod
+    def class_nums(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def class_labels(self):
+        pass
+
+class ObjectDetectionDatasetBase(ObjectDetectionDatasetMixin, ImageDatasetBase):
+    """
+    class_nums, class_labels, _get_image(index), _get_target(index), __len__
+    must be implemented at least
+    """
     def __init__(self, ignore=None, transform=None, target_transform=None, augmentation=None):
         """
         :param ignore: target_transforms.Ignore
@@ -27,32 +43,6 @@ class ObjectDetectionDatasetBase(ObjectRecognitionDatasetBase):
         super().__init__(transform, target_transform, augmentation)
         self.ignore = _check_ins('ignore', ignore, _IgnoreBase, allow_none=True)
 
-    @property
-    @abc.abstractmethod
-    def class_nums(self):
-        pass
-    @property
-    @abc.abstractmethod
-    def class_labels(self):
-        pass
-
-    @abc.abstractmethod
-    def _get_image(self, index):
-        """
-        :param index: int
-        :return:
-            rgb image(Tensor)
-        """
-        raise NotImplementedError('\'_get_image\' must be overridden')
-
-    @abc.abstractmethod
-    def _get_target(self, index):
-        """
-        :param index: int
-        :return:
-            list of bboxes, list of bboxes' label index, list of flags([difficult, truncated])
-        """
-        raise NotImplementedError('\'_get_target\' must be overridden')
 
     def __getitem__(self, index):
         """
@@ -115,13 +105,9 @@ class ObjectDetectionDatasetBase(ObjectRecognitionDatasetBase):
 
         return super().apply_transform(img, *targets)
 
-    @abc.abstractmethod
-    def __len__(self):
-        pass
 
 
-
-class Compose(_DatasetBase):
+class Compose(ImageDatasetBase):
     def __init__(self, datasets, **kwargs):
         """
         :param datasets: tuple of Dataset
@@ -131,10 +117,11 @@ class Compose(_DatasetBase):
             :param target_transform:
             :param augmentation:
         """
-        self.transform = kwargs.get('transform', None)
-        self.target_transform = kwargs.get('target_transform', None)
-        self.augmentation = kwargs.get('augmentation', None)
-
+        transform = kwargs.get('transform', None)
+        target_transform = kwargs.get('target_transform', None)
+        augmentation = kwargs.get('augmentation', None)
+        super().__init__(transform, target_transform, augmentation)
+        
         datasets = _check_ins('datasets', datasets, (tuple, list))
 
         _datasets, _lens = [], []
@@ -144,7 +131,7 @@ class Compose(_DatasetBase):
                 dataset = dataset(**kwargs)
             except Exception as e:
                 raise ValueError('Invalid arguments were passed. {} could not be initialized because\n{}'.format(dataset.__name__, e))
-            dataset = _check_ins('element of datasets', dataset, _DatasetBase)
+            dataset = _check_ins('element of datasets', dataset, ImageDatasetBase)
             if _class_labels is None:
                 _class_labels = dataset.class_labels
             else:

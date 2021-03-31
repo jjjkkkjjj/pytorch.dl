@@ -5,7 +5,31 @@ from .base import TextRecognitionDatasetBase, Alphanumeric_labels
 from ...base.synthtext import *
 from ..._utils import _check_ins, DATA_ROOT
 
-class SynthTextRecognitionSingleDatasetBase(TextRecognitionDatasetBase):
+class SynthTextRecongnitionDatasetMixin:
+    _gts: list
+    _synthtext_dir: str
+    def _get_image(self, index):
+        line = self._gts[index]
+        folder, filename, text = line[:3]
+        xmin, ymin, xmax, ymax = map(float, line[3:7])
+        #x1, y1, x2, y2, x3, y3, x4, y4 = map(int, line[7:15])
+        img = cv2.imread(os.path.join(self._synthtext_dir, 'SynthText', folder, filename))
+        h, w, _ = img.shape
+        # clip
+        xmin, ymin, xmax, ymax = max(xmin, 0), max(ymin, 0), min(xmax, w), min(ymax, h)
+
+        # crop
+        img = img[int(ymin):int(ymax), int(xmin):int(xmax)].copy()
+
+        return cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32)
+
+    def _get_target(self, index):
+        line = self._gts[index]
+        folder, filename, text = line[:3]
+        return text,
+
+
+class SynthTextRecognitionSingleDatasetBase(SynthTextRecongnitionDatasetMixin, TextRecognitionDatasetBase):
     def __init__(self, synthtext_dir, transform=None, target_transform=None, augmentation=None, class_labels=None):
         """
         :param synthtext_dir: str, synthtext directory path above 'Annotations' and 'SynthText'
@@ -32,27 +56,6 @@ class SynthTextRecognitionSingleDatasetBase(TextRecognitionDatasetBase):
             lines = csv.reader(f)
             self._gts = list(lines)[1:] # remove header # use too much memory about 8GB...
         logging.info('Loaded! {}s'.format(time.time() - start))
-
-
-    def _get_image(self, index):
-        line = self._gts[index]
-        folder, filename, text = line[:3]
-        xmin, ymin, xmax, ymax = map(float, line[3:7])
-        #x1, y1, x2, y2, x3, y3, x4, y4 = map(int, line[7:15])
-        img = cv2.imread(os.path.join(self._synthtext_dir, 'SynthText', folder, filename))
-        h, w, _ = img.shape
-        # clip
-        xmin, ymin, xmax, ymax = max(xmin, 0), max(ymin, 0), min(xmax, w), min(ymax, h)
-
-        # crop
-        img = img[int(ymin):int(ymax), int(xmin):int(xmax)].copy()
-
-        return cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32)
-
-    def _get_target(self, index):
-        line = self._gts[index]
-        folder, filename, text = line[:3]
-        return text,
 
     def __len__(self):
         return len(self._gts)

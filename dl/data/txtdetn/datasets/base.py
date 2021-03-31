@@ -1,9 +1,11 @@
-from ...objdetn.datasets.base import ObjectDetectionDatasetBase
+from ...objdetn.datasets.base import ObjectDetectionDatasetBase, ObjectDetectionDatasetMixin
 from ...objdetn.datasets.base import Compose
 
 import torch
 import numpy as np
 
+class TextDetectionDatasetMixin(ObjectDetectionDatasetMixin):
+    pass
 
 class TextDetectionDatasetBase(ObjectDetectionDatasetBase):
     def __getitem__(self, index):
