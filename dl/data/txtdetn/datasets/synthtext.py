@@ -7,61 +7,16 @@ from ...base.synthtext import *
 
 from ..._utils import DATA_ROOT, _check_ins, _get_xml_et_value
 
-class _FoundNonAlphaNumeric(Exception):
-    pass
-
-class SynthTextDetectionSingleDatasetBase(TextDetectionDatasetBase):
-    def __init__(self, synthtext_dir, ignore=None, transform=None, target_transform=None, augmentation=None,
-                 onlyAlphaNumeric=False):
-        """
-        :param synthtext_dir: str, synthtext directory path above 'Annotations' and 'SynthText'
-        :param ignore: target_transforms.Ignore
-        :param transform: instance of transforms
-        :param target_transform: instance of target_transforms
-        :param augmentation:  instance of augmentations
-        :param onlyAlphaNumeric: bool, whether to return img with words containing non-alphanumeric
-        """
-        super().__init__(ignore=ignore, transform=transform, target_transform=target_transform,
-                         augmentation=augmentation)
-
-        self._synthtext_dir = synthtext_dir
-        self._class_labels = SynthText_class_labels
-
-        if not os.path.exists(os.path.join(self._synthtext_dir, 'Annotations')):
-            raise FileNotFoundError('{} was not found'.format(os.path.join(self._synthtext_dir, 'Annotations')))
-
-        self._annopaths = [str(path.absolute()) for path in Path(os.path.join(self._synthtext_dir, 'Annotations')).rglob('*.xml')]
-        self._onlyAlphaNumeric = onlyAlphaNumeric
-
+class SynthTextDetectionDatasetMixin:
+    _synthtext_dir: str
+    _annopaths: list
+    _onlyAlphaNumeric: bool
     def _jpgpath(self, dirname, filename):
         """
         :param filename: path containing .jpg
         :return: path of jpg
         """
         return os.path.join(self._synthtext_dir, 'SynthText', dirname, filename)
-
-    def __len__(self):
-        return len(self._annopaths)
-
-    @property
-    def class_nums(self):
-        return len(self._class_labels)
-    @property
-    def class_labels(self):
-        return self._class_labels
-
-    def __getitem__(self, index):
-        start = time.time()
-        ind = index
-        while True:
-            try:
-                return super().__getitem__(ind)
-            except _FoundNonAlphaNumeric:
-                ind = np.random.randint(0, len(self))
-                if time.time() - start > 10:
-                    logging.warning('10s passed...\nMany non-alphanumeric words may exist.')
-                    start = time.time()
-                pass
 
     def _get_image(self, index):
         """
@@ -112,6 +67,58 @@ class SynthTextDetectionSingleDatasetBase(TextDetectionDatasetBase):
             flags.append({'difficult': _get_xml_et_value(obj, 'difficult', int) == 1})
 
         return np.array(linds, dtype=np.float32), np.array(bboxes, dtype=np.float32), flags, np.array(quads, dtype=np.float32), texts
+
+
+
+class _FoundNonAlphaNumeric(Exception):
+    pass
+
+class SynthTextDetectionSingleDatasetBase(SynthTextDetectionDatasetMixin, TextDetectionDatasetBase):
+    def __init__(self, synthtext_dir, ignore=None, transform=None, target_transform=None, augmentation=None,
+                 onlyAlphaNumeric=False):
+        """
+        :param synthtext_dir: str, synthtext directory path above 'Annotations' and 'SynthText'
+        :param ignore: target_transforms.Ignore
+        :param transform: instance of transforms
+        :param target_transform: instance of target_transforms
+        :param augmentation:  instance of augmentations
+        :param onlyAlphaNumeric: bool, whether to return img with words containing non-alphanumeric
+        """
+        super().__init__(ignore=ignore, transform=transform, target_transform=target_transform,
+                         augmentation=augmentation)
+
+        self._synthtext_dir = synthtext_dir
+        self._class_labels = SynthText_class_labels
+
+        if not os.path.exists(os.path.join(self._synthtext_dir, 'Annotations')):
+            raise FileNotFoundError('{} was not found'.format(os.path.join(self._synthtext_dir, 'Annotations')))
+
+        self._annopaths = [str(path.absolute()) for path in Path(os.path.join(self._synthtext_dir, 'Annotations')).rglob('*.xml')]
+        self._onlyAlphaNumeric = onlyAlphaNumeric
+
+    def __len__(self):
+        return len(self._annopaths)
+
+    @property
+    def class_nums(self):
+        return len(self._class_labels)
+    @property
+    def class_labels(self):
+        return self._class_labels
+
+    def __getitem__(self, index):
+        start = time.time()
+        ind = index
+        while True:
+            try:
+                return super().__getitem__(ind)
+            except _FoundNonAlphaNumeric:
+                ind = np.random.randint(0, len(self))
+                if time.time() - start > 10:
+                    logging.warning('10s passed...\nMany non-alphanumeric words may exist.')
+                    start = time.time()
+                pass
+
 
 class SynthTextDetectionMultiDatasetBase(Compose):
     def __init__(self, **kwargs):
