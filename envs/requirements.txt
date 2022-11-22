@@ -1,7 +1,7 @@
 ffmpeg==1.4
 matplotlib==3.2.1
 opencv-python==4.2.0.34
-pillow==9.0.1
+pillow==9.3.0
 pycurl==7.43.0.5
 pycocotools
 shapely
